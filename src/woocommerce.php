@@ -37,7 +37,7 @@ class WooCommerce {
       $image = imagecreatefromjpeg($image_url);
       $colors = $cc->get_colors($image);
       if (empty($colors)) {
-        echo '<div style="background-color: rgb(255,255,255); height:50px; width: 100%;">Color not found :(</div>';
+        echo '<div style="background-color: rgb(255,255,255); height:50px; width:100%; text-align:center; overflow:hidden;">Color not found :(</div>';
         return;
       }
       preg_match('/\[(.*)\]/', json_encode($colors[0]), $matches);
