@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Ellipsis\Colors\Plugin.
+ * Contains \MauricioUrrego\WoocommerceColors\Plugin.
  */
 
-namespace Ellipsis\Colors;
+namespace Mauriciourrego\WoocommerceColors;
 
 /**
  * Main front-end functionality.
@@ -26,7 +26,8 @@ class Plugin {
   const L10N = self::PREFIX;
 
   public static function init() {
-    WooCommerce::init();
+    echo '<button class="btn" onclick="onrequest();">Auto-populate</button>';
+    //WooCommerce::init();
   }
 
   /**

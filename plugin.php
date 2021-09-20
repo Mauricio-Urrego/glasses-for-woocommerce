@@ -1,19 +1,16 @@
 <?php
 
 /*
-  Plugin Name: Colors
+  Plugin Name: Woocommerce Colors
   Version: 0.0.1
-  Text Domain: colors
+  Text Domain: woocommerce-colors
   Description: Recommend related products based on dominant colors.
-  Author: ellipsis
-  Author URI: https://www.machinafashionista.io/
+  Author: Mauricio Urrego
   License: GPL-2.0+
   License URI: http://www.gnu.org/licenses/gpl-2.0
 */
 
-namespace Ellipsis\Colors;
-
-use Ellipsis\ColorCube;
+namespace Mauriciourrego\WoocommerceColors;
 
 if (!defined('ABSPATH')) {
   header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
@@ -39,4 +36,15 @@ register_deactivation_hook(__FILE__, __NAMESPACE__ . '\Schema::deactivate');
 register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 
 add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
-add_action('wp_loaded', __NAMESPACE__ . '\Plugin::init', 20); // TODO: load only on settings trigger.
+
+function edit_product_column( $columns ) {
+    //add column
+    $columns['Terms'] = __( 'Terms', 'woocommerce' );
+    var_dump($columns);
+
+    return $columns;
+}
+add_filter( 'manage_edit-product_columns', 'add_product_column', 10, 1 );
+
+add_action('woocommerce_after_product_attribute_settings', __NAMESPACE__ . '\Plugin::init', 20); // TODO: load only on settings trigger.
+// 'woocommerce_after_product_attribute_settings' for single product updates.

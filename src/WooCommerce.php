@@ -1,7 +1,13 @@
 <?php
 
-namespace Ellipsis\Colors;
+/**
+ * @file
+ * Contains \Mauriciourrego\WoocommerceColors\WooCommerce.
+ */
 
+namespace Mauriciourrego\WoocommerceColors;
+
+use Mauriciourrego\ColorcubePhp\ColorCube;
 use WP_Query;
 use WC_Product_Attribute;
 
