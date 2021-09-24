@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Ellipsis\Colors\Schema.
+ * Contains \Mauriciourrego\WoocommerceColors\Schema.
  */
 
-namespace Ellipsis\Colors;
+namespace Mauriciourrego\WoocommerceColors;
 
 /**
  * Generic plugin lifetime and maintenance functionality.

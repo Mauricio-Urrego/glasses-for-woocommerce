@@ -1,0 +1,23 @@
+{
+  "name": "mauriciourrego/woocommerce-colors",
+  "type": "project",
+  "autoload": {
+    "psr-4": {
+      "Mauriciourrego\\Woocommercecolors\\": "src/"
+    },
+    "classmap": [
+      "src/Plugin.php",
+      "src/Schema.php",
+      "src/WooCommerce.php"
+    ]
+  },
+  "authors": [
+    {
+      "name": "Mauricio Urrego",
+      "email": "m.urrego7@gmail.com"
+    }
+  ],
+  "require": {
+    "mauriciourrego/colorcube-php": "dev-main"
+  }
+}
