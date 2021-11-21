@@ -6,6 +6,7 @@
       "Mauriciourrego\\Woocommercecolors\\": "src/"
     },
     "classmap": [
+      "src/Admin.php",
       "src/Plugin.php",
       "src/Schema.php",
       "src/WooCommerce.php"
@@ -18,6 +19,7 @@
     }
   ],
   "require": {
-    "mauriciourrego/colorcube-php": "dev-main"
+    "mauriciourrego/colorcube-php": "dev-main",
+    "talesoft/phim": "^1.0"
   }
 }

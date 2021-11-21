@@ -11,6 +11,7 @@
 */
 
 namespace Mauriciourrego\WoocommerceColors;
+require_once  __DIR__ . '/vendor/autoload.php';
 
 if (!defined('ABSPATH')) {
   header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
@@ -37,14 +38,9 @@ register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 
 add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
 
-function edit_product_column( $columns ) {
-    //add column
-    $columns['Terms'] = __( 'Terms', 'woocommerce' );
-    var_dump($columns);
+add_action('admin_init', __NAMESPACE__ . '\Admin::admin_init');
+add_action('admin_menu', __NAMESPACE__ . '\Admin::add_wc_colors_menu_page');
 
-    return $columns;
+function processColors() {
+  add_action('init', __NAMESPACE__ . '\Plugin::init', 20); // TODO: load only on settings trigger.
 }
-add_filter( 'manage_edit-product_columns', 'add_product_column', 10, 1 );
-
-add_action('woocommerce_after_product_attribute_settings', __NAMESPACE__ . '\Plugin::init', 20); // TODO: load only on settings trigger.
-// 'woocommerce_after_product_attribute_settings' for single product updates.

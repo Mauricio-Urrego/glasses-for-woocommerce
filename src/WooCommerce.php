@@ -10,8 +10,12 @@ namespace Mauriciourrego\WoocommerceColors;
 use Mauriciourrego\ColorcubePhp\ColorCube;
 use WP_Query;
 use WC_Product_Attribute;
+use Phim\Color;
+use Phim\Color\RgbColor;
 
 class WooCommerce {
+
+  // TODO: Make it so that the colors it identifies can be named by user showing defaults first.
 
   public static function init() {
     // loop through all products. TODO: Make customizable.

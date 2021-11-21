@@ -16,6 +16,7 @@ class Schema {
    * register_activation_hook() callback.
    */
   public static function activate() {
+    // Process all products.
   }
 
   /**

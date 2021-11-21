@@ -1,0 +1,134 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "a0ca4210040f7d45dbc37de770e1a5a9",
+    "packages": [
+        {
+            "name": "mauriciourrego/colorcube-php",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Mauricio-Urrego/colorcube-php.git",
+                "reference": "eea86e500d73b3f88ba924f700c1ad23fef47ca2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Mauricio-Urrego/colorcube-php/zipball/eea86e500d73b3f88ba924f700c1ad23fef47ca2",
+                "reference": "eea86e500d73b3f88ba924f700c1ad23fef47ca2",
+                "shasum": ""
+            },
+            "require": {
+                "ext-gd": "*"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Mauriciourrego\\ColorcubePhp\\": "src/"
+                },
+                "classmap": [
+                    "src/ColorCube.php",
+                    "src/CubeCell.php",
+                    "src/LocalMaximum.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mauricio Urrego",
+                    "email": "m.urrego7@gmail.com"
+                }
+            ],
+            "description": "Dominant color extraction from RGB images — PHP port of Ole Krause-Sparman's algorithm.",
+            "support": {
+                "issues": "https://github.com/Mauricio-Urrego/colorcube-php/issues",
+                "source": "https://github.com/Mauricio-Urrego/colorcube-php/tree/main"
+            },
+            "time": "2021-09-11T14:04:59+00:00"
+        },
+        {
+            "name": "talesoft/phim",
+            "version": "1.0.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Talesoft/phim.git",
+                "reference": "065b4fac0ef9d7da6f638e5c95815f9fd924f98e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Talesoft/phim/zipball/065b4fac0ef9d7da6f638e5c95815f9fd924f98e",
+                "reference": "065b4fac0ef9d7da6f638e5c95815f9fd924f98e",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.6"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^6.1"
+            },
+            "suggest": {
+                "gd": "for image processing with GD",
+                "imagick": "for image processing with Imagick",
+                "symfony/mbstring-polyfill": "if youre lacking the mbstring extension or can't install it"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "": "src/"
+                },
+                "files": [
+                    "src/Phim/functions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Torben Koehn",
+                    "email": "torben@talesoft.codes"
+                }
+            ],
+            "description": "An image and color manipulation and processing library for PHP",
+            "homepage": "http://phim.talesoft.codes",
+            "keywords": [
+                "CIEDE2000",
+                "cie",
+                "color",
+                "gd",
+                "hsl",
+                "hsv",
+                "image",
+                "imagick",
+                "lab",
+                "manipulation",
+                "processing"
+            ],
+            "support": {
+                "docs": "http://phim.talesoft.codes/docs",
+                "email": "torben@talesoft.codes",
+                "issues": "https://github.com/Talesoft/phim/issues",
+                "source": "https://github.com/Talesoft/phim"
+            },
+            "time": "2020-10-20T10:56:46+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "mauriciourrego/colorcube-php": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": [],
+    "plugin-api-version": "2.1.0"
+}

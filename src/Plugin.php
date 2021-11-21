@@ -16,7 +16,7 @@ class Plugin {
    *
    * @var string
    */
-  const PREFIX = 'colors';
+  const PREFIX = 'woocommerce-colors';
 
   /**
    * Gettext localization domain.
@@ -26,8 +26,7 @@ class Plugin {
   const L10N = self::PREFIX;
 
   public static function init() {
-    echo '<button class="btn" onclick="onrequest();">Auto-populate</button>';
-    //WooCommerce::init();
+    WooCommerce::init();
   }
 
   /**
