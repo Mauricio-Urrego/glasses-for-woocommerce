@@ -16,8 +16,11 @@ use Phim\Color\RgbColor;
 class WooCommerce {
 
   // TODO: Make it so that the colors it identifies can be named by user showing defaults first.
-
   public static function init() {
+    add_action('wp_ajax_process_colors', __CLASS__ . '::process_colors');
+  }
+
+  public static function process_colors() {
     // loop through all products. TODO: Make customizable.
     $args = array(
       'post_type' => 'product',
@@ -116,5 +119,7 @@ class WooCommerce {
         }
       }
     }
+
+    die();
   }
 }

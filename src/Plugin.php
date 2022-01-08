@@ -25,10 +25,6 @@ class Plugin {
    */
   const L10N = self::PREFIX;
 
-  public static function init() {
-    WooCommerce::init();
-  }
-
   /**
    * Loads the plugin textdomain.
    */

@@ -37,10 +37,6 @@ register_deactivation_hook(__FILE__, __NAMESPACE__ . '\Schema::deactivate');
 register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 
 add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
-
+add_action('init', __NAMESPACE__ . '\WooCommerce::init', 20);
 add_action('admin_init', __NAMESPACE__ . '\Admin::admin_init');
 add_action('admin_menu', __NAMESPACE__ . '\Admin::add_wc_colors_menu_page');
-
-function processColors() {
-  add_action('init', __NAMESPACE__ . '\Plugin::init', 20); // TODO: load only on settings trigger.
-}

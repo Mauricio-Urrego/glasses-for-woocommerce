@@ -1,10 +1,13 @@
 (function($) {
   $(document).ready(function() {
     $('[data-process]').click(() => {
-      $.ajax({
-        url: '/wp-content/plugins/woocommerce-colors/handlers/adminHandler.php', success: function(result){
-          alert(result);
-        }
+      let data = {
+        'action': 'process_colors',
+        'foobar_id': 123
+      };
+
+      $.post(ajaxurl, data, function(response) {
+        alert('Got this from the server: ' + response);
       });
     });
   })
