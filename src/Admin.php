@@ -32,7 +32,7 @@ class Admin {
   public static function wc_colors_settings_page() {
     echo '
       <h1>Woocommerce Colors</h1>
-      <p class="wc-colors__description">Clicking the button below will loop through all of your published products and assign a color attribute to them automagically. Review the colors <a href="edit-tags.php?taxonomy=pa_color&post_type=product">here</a> to change them to more friendly names.</p>
+      <p class="wc-colors__description">Clicking the button below will loop through all of your published products and assign a color attribute to them auto-magically. Review the colors <a href="edit-tags.php?taxonomy=pa_color&post_type=product">here</a> to change them to more friendly names.</p>
       <div class="wc-colors__process-data" data-process>Process Colors</div>
     ';
   }
