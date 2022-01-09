@@ -2,9 +2,9 @@
 
 /*
   Plugin Name: Woocommerce Colors
-  Version: 0.0.1
+  Version: 0.0.2
   Text Domain: woocommerce-colors
-  Description: Recommend related products based on dominant colors.
+  Description: Assign a color attribute based on the dominant color in the product image.
   Author: Mauricio Urrego
   License: GPL-2.0+
   License URI: http://www.gnu.org/licenses/gpl-2.0
