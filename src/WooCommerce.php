@@ -15,17 +15,16 @@ use Phim\Color\RgbColor;
 
 class WooCommerce {
 
-  // TODO: Make it so that the colors it identifies can be named by user showing defaults first.
   public static function init() {
     add_action('wp_ajax_process_colors', __CLASS__ . '::process_colors');
   }
 
   public static function process_colors() {
-    // loop through all products. TODO: Make customizable.
-    $args = array(
+    // loop through all products. TODO: Make customizable (drafts, etc.)
+    $args = [
       'post_type' => 'product',
       'post_status' => 'publish'
-    );
+    ];
     $loop = new WP_Query($args);
 
     while ($loop->have_posts()) {
@@ -65,11 +64,11 @@ class WooCommerce {
         if (empty($colors)) {
           break;
         }
-        preg_match('/\[(.*)\]/', json_encode($colors[0]), $matches);
+        $rgbColor = new RgbColor($colors[0][0], $colors[0][1], $colors[0][3]);
 
         // Color is identified so assign color to product attribute term.
         $taxonomy = 'pa_color';
-        $term_name = $matches[1];
+        $term_name = Color::toName($rgbColor);
         $term_slug = sanitize_title($term_name);
 
         // Check if the term exists and if not then create it (and get the term ID).
@@ -102,7 +101,7 @@ class WooCommerce {
 
           $attribute->set_id(sizeof($attributes) + 1);
           $attribute->set_name($taxonomy);
-          $attribute->set_options(array($term_id));
+          $attribute->set_options([$term_id]);
           $attribute->set_position(sizeof($attributes) + 1);
           $attribute->set_visible(true);
           $attribute->set_variation(false);
@@ -120,6 +119,7 @@ class WooCommerce {
       }
     }
 
-    die();
+    // @see: https://codex.wordpress.org/AJAX_in_Plugins
+    wp_die();
   }
 }
