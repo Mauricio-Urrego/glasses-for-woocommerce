@@ -14,7 +14,9 @@ class Admin {
 
   public static function admin_init() {
     add_action('admin_enqueue_scripts', __CLASS__ . '::enqueue_admin_assets');
-
+    if (!class_exists('WooCommerce')) {
+      add_action('admin_notices', __NAMESPACE__ . '\Admin::enable_woocommerce');
+    }
   }
 
   public static function add_wc_colors_menu_page() {
@@ -30,15 +32,29 @@ class Admin {
   }
 
   public static function wc_colors_settings_page() {
-    echo '
-      <h1>Woocommerce Colors</h1>
-      <p class="wc-colors__description">Clicking the button below will loop through all of your published products and assign a color attribute to them auto-magically. Review the colors <a href="edit-tags.php?taxonomy=pa_color&post_type=product">here</a> to change them to more friendly names.</p>
-      <div class="wc-colors__process-data" data-process>Process Colors</div>
-    ';
+    echo '<h1>Woocommerce Colors</h1>';
+    echo '<p class="wc-colors__description">
+            Clicking the button below will loop through all of your published products and assign a color attribute to 
+            them auto-magically. Review the colors <a href="edit-tags.php?taxonomy=pa_color&post_type=product">here</a> 
+            to change them to more friendly names.
+          </p>';
+
+    if (!class_exists('WooCommerce')) {
+      echo '<div class="wc-colors__process-data" data-process style="filter: grayscale(1)">Process Colors</div>';
+      return;
+    }
+
+    echo '<div class="wc-colors__process-data" data-process>Process Colors</div>';
   }
 
   public static function enqueue_admin_assets() {
     wp_enqueue_style( 'wc-colors', '/wp-content/plugins/woocommerce-colors/assets/css/style.css');
-    wp_enqueue_script( 'wc-colors', '/wp-content/plugins/woocommerce-colors/assets/js/main.js', array('jquery'));
+    wp_enqueue_script( 'wc-colors', '/wp-content/plugins/woocommerce-colors/assets/js/main.js', ['jquery']);
+  }
+
+  public static function enable_woocommerce() {
+    $class = 'notice notice-error';
+    $message = __('Oops! Enable WooCommerce plugin to use Colors for WooCommerce.', 'woocommerce-colors');
+    printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html($message));
   }
 }

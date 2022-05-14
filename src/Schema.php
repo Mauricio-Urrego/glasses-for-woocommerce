@@ -17,6 +17,9 @@ class Schema {
    */
   public static function activate() {
     // @TODO: Make sure color taxonomy exists when running WooCommerce::process_colors.
+    if(!class_exists('WooCommerce')){
+      trigger_error(__('Please enable WooCommerce Plugin before using Colors for WooCommerce.', 'woocommerce-colors'), E_USER_ERROR);
+    }
     Schema::ensure_color_tax();
   }
 

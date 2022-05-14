@@ -43,14 +43,14 @@ class WooCommerce {
 
       // Collect image URLs.
       $image_urls = [];
-      if ( $image_ids ) {
+      if ($image_ids) {
         foreach ($image_ids as $image_id) {
-          $image_urls[] = wp_get_attachment_image_url( $image_id, 'full' );
+          $image_urls[] = wp_get_attachment_image_url($image_id, 'full');
         }
       }
 
-      foreach ( $attachment_ids as $attachment_id ) {
-        $image_urls[] = wp_get_attachment_url( $attachment_id );
+      foreach ($attachment_ids as $attachment_id) {
+        $image_urls[] = wp_get_attachment_url($attachment_id);
       }
 
       $cc = new ColorCube();
@@ -85,7 +85,7 @@ class WooCommerce {
         // If the product attribute is set for the product.
         if (array_key_exists($taxonomy, $attributes)) {
           foreach($attributes as $key => $attribute){
-            if( $key === $taxonomy ){
+            if($key === $taxonomy){
               $options = $attribute->get_options();
               $options[] = $term_id;
               $attribute->set_options($options);

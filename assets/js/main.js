@@ -7,7 +7,9 @@
       };
 
       $.post(ajaxurl, data, function(response) {
-        alert('Got this from the server: ' + response);
+        if (window.confirm('All done! Check them out?')) {
+          window.open('edit-tags.php?taxonomy=pa_color&post_type=product', '_self');
+        }
       });
     });
   })
