@@ -1,9 +1,9 @@
 {
-  "name": "mauriciourrego/woocommerce-colors",
+  "name": "mauriciourrego/woo-colors-for-woocommerce",
   "type": "project",
   "autoload": {
     "psr-4": {
-      "Mauriciourrego\\Woocommercecolors\\": "src/"
+      "Mauriciourrego\\WooColorsForWooCommerce\\": "src/"
     },
     "classmap": [
       "src/Admin.php",

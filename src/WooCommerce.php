@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Mauriciourrego\WoocommerceColors\WooCommerce.
+ * Contains \Mauriciourrego\WooColorsForWooCommerce\WooCommerce.
  */
 
-namespace Mauriciourrego\WoocommerceColors;
+namespace Mauriciourrego\WooColorsForWooCommerce;
 
 use Mauriciourrego\ColorcubePhp\ColorCube;
 use WP_Query;

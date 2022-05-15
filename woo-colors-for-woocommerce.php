@@ -1,16 +1,16 @@
 <?php
 
 /*
-  Plugin Name: Woocommerce Colors
-  Version: 0.0.2
-  Text Domain: woocommerce-colors
+  Plugin Name: Woo Colors! for WooCommerce
+  Version: 0.0.3
+  Text Domain: woo-colors-for-woocommerce
   Description: Assign a color attribute based on the dominant color in the product image.
   Author: Mauricio Urrego
   License: GPL-2.0+
   License URI: http://www.gnu.org/licenses/gpl-2.0
 */
 
-namespace Mauriciourrego\WoocommerceColors;
+namespace Mauriciourrego\WooColorsForWooCommerce;
 require_once  __DIR__ . '/vendor/autoload.php';
 
 if (!defined('ABSPATH')) {
@@ -39,4 +39,4 @@ register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
 add_action('init', __NAMESPACE__ . '\WooCommerce::init', 20);
 add_action('admin_init', __NAMESPACE__ . '\Admin::admin_init');
-add_action('admin_menu', __NAMESPACE__ . '\Admin::add_wc_colors_menu_page');
+add_action('admin_menu', __NAMESPACE__ . '\Admin::add_woo_colors_menu_page');

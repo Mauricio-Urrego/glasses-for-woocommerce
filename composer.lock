@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a0ca4210040f7d45dbc37de770e1a5a9",
+    "content-hash": "612b2d561a7367a79c82294d84c096d2",
     "packages": [
         {
             "name": "mauriciourrego/colorcube-php",
@@ -79,12 +79,12 @@
             },
             "type": "library",
             "autoload": {
-                "psr-4": {
-                    "": "src/"
-                },
                 "files": [
                     "src/Phim/functions.php"
-                ]
+                ],
+                "psr-4": {
+                    "": "src/"
+                }
             },
             "notification-url": "https://packagist.org/downloads/",
             "license": [
@@ -130,5 +130,5 @@
     "prefer-lowest": false,
     "platform": [],
     "platform-dev": [],
-    "plugin-api-version": "2.1.0"
+    "plugin-api-version": "2.3.0"
 }

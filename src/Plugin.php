@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \MauricioUrrego\WoocommerceColors\Plugin.
+ * Contains \MauricioUrrego\WooColorsForWooCommerce\Plugin.
  */
 
-namespace Mauriciourrego\WoocommerceColors;
+namespace Mauriciourrego\WooColorsForWooCommerce;
 
 /**
  * Main front-end functionality.
@@ -16,7 +16,7 @@ class Plugin {
    *
    * @var string
    */
-  const PREFIX = 'woocommerce-colors';
+  const PREFIX = 'woo-colors-for-woocommerce';
 
   /**
    * Gettext localization domain.
