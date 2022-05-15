@@ -1,6 +1,6 @@
 {
   "name": "mauriciourrego/woo-colors-for-woocommerce",
-  "type": "project",
+  "type": "wordpress-plugin",
   "autoload": {
     "psr-4": {
       "Mauriciourrego\\WooColorsForWooCommerce\\": "src/"
