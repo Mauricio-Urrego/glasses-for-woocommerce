@@ -45,7 +45,7 @@ class WooCommerce {
       $image_urls = [];
       if ($image_ids) {
         foreach ($image_ids as $image_id) {
-          $image_urls[] = wp_get_attachment_image_url($image_id, 'full');
+          $image_urls[] = wp_get_original_image_path($image_id);
         }
       }
 

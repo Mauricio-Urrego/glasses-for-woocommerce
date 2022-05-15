@@ -19,6 +19,15 @@ class Admin {
     }
   }
 
+  /**
+   * Get the plugin url.
+   *
+   * @return string
+   */
+  public static function plugin_url() {
+    return untrailingslashit( plugins_url( '/', WOOCOLORS_PLUGIN_FILE ) );
+  }
+
   public static function add_woo_colors_menu_page() {
     add_menu_page(
       'Woo Colors!',
@@ -48,8 +57,9 @@ class Admin {
   }
 
   public static function enqueue_admin_assets() {
-    wp_enqueue_style('woo-colors', '/wp-content/plugins/woo-colors-for-woocommerce/assets/css/style.css');
-    wp_enqueue_script('woo-colors', '/wp-content/plugins/woo-colors-for-woocommerce/assets/js/main.js', ['jquery']);
+    $plugin_url = self::plugin_url();
+    wp_enqueue_style('woo-colors', $plugin_url . '/assets/css/style.css');
+    wp_enqueue_script('woo-colors', $plugin_url . '/assets/js/main.js', ['jquery']);
   }
 
   public static function enable_woocommerce() {

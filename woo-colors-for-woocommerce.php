@@ -13,6 +13,10 @@
 namespace Mauriciourrego\WooColorsForWooCommerce;
 require_once  __DIR__ . '/vendor/autoload.php';
 
+if (!defined('WOOCOLORS_PLUGIN_FILE')) {
+  define('WOOCOLORS_PLUGIN_FILE', __FILE__);
+}
+
 if (!defined('ABSPATH')) {
   header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
   exit;
