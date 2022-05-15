@@ -2,7 +2,7 @@
 
 /*
   Plugin Name: Woo Colors! for WooCommerce
-  Version: 0.0.3
+  Version: 1.0.0
   Text Domain: woo-colors-for-woocommerce
   Description: Assign a color attribute based on the dominant color in the product image.
   Author: Mauricio Urrego
