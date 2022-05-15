@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Mauriciourrego\WooColorsForWooCommerce\Schema.
+ * Contains \Mauriciourrego\GlassesForWooCommerce\Schema.
  */
 
-namespace Mauriciourrego\WooColorsForWooCommerce;
+namespace Mauriciourrego\GlassesForWooCommerce;
 
 /**
  * Generic plugin lifetime and maintenance functionality.
@@ -16,9 +16,8 @@ class Schema {
    * register_activation_hook() callback.
    */
   public static function activate() {
-    // @TODO: Make sure color taxonomy exists when running WooCommerce::process_colors.
     if(!class_exists('WooCommerce')){
-      trigger_error(__('Please enable WooCommerce Plugin before using Woo Colors! for WooCommerce.', 'woo-colors-for-woocommerce'), E_USER_ERROR);
+      trigger_error(__('Please enable WooCommerce Plugin before using Glasses for WooCommerce.', 'glasses-for-woocommerce'), E_USER_ERROR);
     }
     Schema::ensure_color_tax();
   }

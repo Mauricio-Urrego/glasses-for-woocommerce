@@ -1,20 +1,20 @@
 <?php
 
 /*
-  Plugin Name: Woo Colors! for WooCommerce
+  Plugin Name: Glasses for WooCommerce
   Version: 1.0.0
-  Text Domain: woo-colors-for-woocommerce
+  Text Domain: glasses-for-woocommerce
   Description: Assign a color attribute based on the dominant color in the product image.
   Author: Mauricio Urrego
   License: GPL-2.0+
   License URI: http://www.gnu.org/licenses/gpl-2.0
 */
 
-namespace Mauriciourrego\WooColorsForWooCommerce;
+namespace Mauriciourrego\GlassesForWooCommerce;
 require_once  __DIR__ . '/vendor/autoload.php';
 
-if (!defined('WOOCOLORS_PLUGIN_FILE')) {
-  define('WOOCOLORS_PLUGIN_FILE', __FILE__);
+if (!defined('GLASSES_PLUGIN_FILE')) {
+  define('GLASSES_PLUGIN_FILE', __FILE__);
 }
 
 if (!defined('ABSPATH')) {
@@ -43,4 +43,4 @@ register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
 add_action('init', __NAMESPACE__ . '\WooCommerce::init', 20);
 add_action('admin_init', __NAMESPACE__ . '\Admin::admin_init');
-add_action('admin_menu', __NAMESPACE__ . '\Admin::add_woo_colors_menu_page');
+add_action('admin_menu', __NAMESPACE__ . '\Admin::add_glasses_menu_page');

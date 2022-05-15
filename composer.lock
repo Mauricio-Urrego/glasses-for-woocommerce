@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "31000f9c2b7bdecd79af5cbae74150d4",
+    "content-hash": "b18ae3b3639c3a66fd9bf6a430f43ec4",
     "packages": [
         {
             "name": "mauriciourrego/colorcube-php",

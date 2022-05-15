@@ -2,10 +2,10 @@
 
 /**
  * @file
- * Contains \Mauriciourrego\WooColorsForWooCommerce\WooCommerce.
+ * Contains \Mauriciourrego\GlassesForWooCommerce\WooCommerce.
  */
 
-namespace Mauriciourrego\WooColorsForWooCommerce;
+namespace Mauriciourrego\GlassesForWooCommerce;
 
 use Mauriciourrego\ColorcubePhp\ColorCube;
 use WP_Query;
@@ -20,6 +20,7 @@ class WooCommerce {
   }
 
   public static function process_colors() {
+    Schema::ensure_color_tax();
     // loop through all products. TODO: Make customizable (drafts, etc.)
     $args = [
       'post_type' => 'product',

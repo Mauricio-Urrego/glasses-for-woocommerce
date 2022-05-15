@@ -1,9 +1,9 @@
 {
-  "name": "mauriciourrego/woo-colors-for-woocommerce",
+  "name": "mauriciourrego/glasses-for-woocommerce",
   "type": "wordpress-plugin",
   "autoload": {
     "psr-4": {
-      "Mauriciourrego\\WooColorsForWooCommerce\\": "src/"
+      "Mauriciourrego\\GlassesForWooCommerce\\": "src/"
     },
     "classmap": [
       "src/Admin.php",
@@ -14,7 +14,7 @@
   },
   "autoload-dev": {
     "psr-4": {
-      "Mauriciourrego\\WooColorsForWooCommerce\\": "tests/"
+      "Mauriciourrego\\GlassesForWooCommerce\\": "tests/"
     },
     "classmap": [
       "tests/WooCommerceTest.php"

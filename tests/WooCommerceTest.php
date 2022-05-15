@@ -1,6 +1,6 @@
 <?php
 
-namespace Mauriciourrego\WooColorsForWooCommerce;
+namespace Mauriciourrego\GlassesForWooCommerce;
 
 use PHPUnit\Framework\TestCase;
 

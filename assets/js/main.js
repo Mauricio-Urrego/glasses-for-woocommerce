@@ -6,10 +6,10 @@
         'foobar_id': 123
       };
 
-      $('.woo-colors__process-data').text('Processing...');
+      $('.glasses__process-data').text('Processing...');
       $.post(ajaxurl, data, function(response) {
         if (window.confirm('All done! Check them out?')) {
-          $('.woo-colors__process-data').text('Process Colors');
+          $('.glasses__process-data').text('Process Colors');
           window.open('edit-tags.php?taxonomy=pa_color&post_type=product', '_self');
         }
       });
