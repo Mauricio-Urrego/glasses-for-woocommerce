@@ -18,7 +18,6 @@ if (!defined('GLASSES_PLUGIN_FILE')) {
 }
 
 if (!defined('ABSPATH')) {
-  header($_SERVER['SERVER_PROTOCOL'] . ' 404 Not Found');
   exit;
 }
 
