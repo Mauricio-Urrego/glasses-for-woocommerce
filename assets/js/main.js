@@ -8,9 +8,15 @@
 
       $('.glasses__process-data').text('Processing...');
       $.post(ajaxurl, data, function(response) {
-        if (window.confirm('All done! Check them out?')) {
+        if (response) {
+          window.confirm(response);
           $('.glasses__process-data').text('Process Colors');
-          window.open('edit-tags.php?taxonomy=pa_color&post_type=product', '_self');
+        }
+        else {
+          if (window.confirm('All done! Check them out?')) {
+            $('.glasses__process-data').text('Process Colors');
+            window.open('edit-tags.php?taxonomy=pa_glasses_color&post_type=product', '_self');
+          }
         }
       });
     });
