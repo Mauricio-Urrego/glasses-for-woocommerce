@@ -44,7 +44,7 @@ class Admin {
     echo '<h1>Glasses for WooCommerce</h1>';
     echo '<p class="glasses__description">
             Clicking the button below will loop through all of your published products and assign a color attribute to 
-            them auto-magically. Review the colors <a target="_blank" href="edit-tags.php?taxonomy=pa_color&post_type=product">here</a> 
+            them auto-magically. Review the colors <a target="_blank" href="edit-tags.php?taxonomy=pa_glasses_color&post_type=product">here</a> 
             to change them to more friendly names.
           </p>';
 

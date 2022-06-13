@@ -68,13 +68,16 @@ class WooCommerce {
         $rgbColor = new RgbColor($colors[0][0], $colors[0][1], $colors[0][3]);
 
         // Color is identified so assign color to product attribute term.
-        $taxonomy = 'pa_color';
+        $taxonomy = 'pa_glasses_color';
         $term_name = Color::toName($rgbColor);
         $term_slug = sanitize_title($term_name);
 
         // Check if the term exists and if not then create it (and get the term ID).
         if (!term_exists($term_name, $taxonomy)) {
           $term_data = wp_insert_term($term_name, $taxonomy);
+          if (is_wp_error($term_data)) {
+              wp_die("Oopsies! Looks like you deleted your colors attribute by mistake. We'll handle it. Let's try that one more time. Click on 'Process Colors' again please :)");
+          }
           $term_id = $term_data['term_id'];
         }
         else {

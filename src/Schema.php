@@ -36,10 +36,10 @@ class Schema {
 
   public static function ensure_color_tax() {
     $attributes = wc_get_attribute_taxonomies();
-    $slugs = wp_list_pluck($attributes, 'pa_color');
-    if (!in_array('pa_color', $slugs)) {
+    $color_taxonomy = get_terms('pa_glasses_color', $attributes);
+    if (is_wp_error($color_taxonomy)) {
       $args = [
-        'slug'    => 'pa_color',
+        'slug'    => 'pa_glasses_color',
         'name'   => __('Color', Plugin::L10N),
         'type'    => 'text',
         'orderby' => 'menu_order',
