@@ -53,7 +53,12 @@ class Admin {
       return;
     }
 
-    echo '<div class="glasses__process-data" data-process>Process Colors</div>';
+    echo '<button type="button" class="glasses__process-data" data-process>
+        <div class="button__progress"></div>
+        <span class="button__text">Process Colors</span>
+	  </button>';
+
+	echo '<div id="progress"></div>';
   }
 
   public static function enqueue_admin_assets() {

@@ -2,7 +2,7 @@
 
 /*
   Plugin Name: Glasses for WooCommerce
-  Version: 1.0.0
+  Version: 1.0.3
   Text Domain: glasses-for-woocommerce
   Description: Assign a color attribute based on the dominant color in the product image.
   Author: Mauricio Urrego
