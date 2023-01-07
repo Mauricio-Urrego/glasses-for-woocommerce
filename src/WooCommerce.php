@@ -17,24 +17,31 @@ class WooCommerce {
 
   public static function init() {
     add_action('wp_ajax_process_colors', __CLASS__ . '::process_colors');
+    add_action('wp_ajax_check_progress', __CLASS__ . '::check_progress');
   }
 
   public static function process_colors() {
+	global $wpdb; // For recording progress.
+
     Schema::ensure_color_tax();
     // loop through all products. TODO: Make customizable (drafts, etc.)
     $args = [
       'post_type' => 'product',
-      'post_status' => 'publish'
+      'post_status' => 'publish',
+      'posts_per_page' => -1
     ];
     $loop = new WP_Query($args);
+	$wpdb->update('wp_glasses_progress', ['TotalFound' => $loop->found_posts], ['ProgressID' => 1]);
 
     while ($loop->have_posts()) {
       $loop->the_post();
-      $product_id = get_the_id();
 
-      $product = wc_get_product($product_id);
+	  $product_id = get_the_id();
 
-      // Declare containers for color identification.
+	  $product = wc_get_product($product_id);
+	  $wpdb->update('wp_glasses_progress', ['CurrentIndex' => $loop->current_post, 'ProductName' => $product->get_title()], ['ProgressID' => 1]);
+
+	  // Declare containers for color identification.
       $attachment_ids = [];
       $image_ids = [];
 
@@ -123,7 +130,20 @@ class WooCommerce {
       }
     }
 
+	wp_reset_postdata();
+
     // @see: https://codex.wordpress.org/AJAX_in_Plugins
     wp_die();
+  }
+
+  public static function check_progress() {
+	  global $wpdb;
+	  $result = [];
+	  $result[] = $wpdb->get_var("SELECT TotalFound FROM wp_glasses_progress WHERE ProgressID=1");
+	  $result[] = $wpdb->get_var("SELECT CurrentIndex FROM wp_glasses_progress WHERE ProgressID=1");
+	  $result[] = $wpdb->get_var("SELECT ProductName FROM wp_glasses_progress WHERE ProgressID=1");
+	  echo json_encode($result);
+
+	  wp_die();
   }
 }
