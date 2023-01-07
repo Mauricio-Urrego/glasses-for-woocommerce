@@ -19,7 +19,7 @@ Identifies the dominant color in your woocommerce products auto-magically. With 
 
 = Does it take long to process my products? =
 
-If you have a lot of products please give it some time to work, it will let you know when it is complete. If it is taking longer than expected then please report a bug. We'll add a progress bar soon ;)
+If you have a lot of products please give it some time to work, it will let you know when it is complete. If it is taking longer than expected then please report a bug ;)
 
 = Why don't the colors have human names assigned to them like red, blue, or green? =
 
