@@ -7,6 +7,8 @@
 
 namespace Mauriciourrego\GlassesForWooCommerce;
 
+use WC_Product_Variable;
+
 /**
  * Administrative back-end functionality.
  */
@@ -15,8 +17,14 @@ class Admin {
   public static function admin_init() {
     add_action('admin_enqueue_scripts', __CLASS__ . '::enqueue_admin_assets');
     if (!class_exists('WooCommerce')) {
-      add_action('admin_notices', __NAMESPACE__ . '\Admin::enable_woocommerce');
+      add_action('admin_notices', __CLASS__ . '::enable_woocommerce');
     }
+	self::register_settings();
+	add_filter('manage_edit-product_columns', __CLASS__ . '::wc_product_table_columns');
+	add_filter('manage_product_posts_custom_column', __CLASS__ . '::wc_product_table_columns_content', 10, 2);
+	add_filter('bulk_actions-edit-product', __CLASS__ . '::wc_add_glasses_bulk_edit');
+	add_filter('handle_bulk_actions-edit-product', __CLASS__ . '::wc_handle_glasses_bulk_edit', 10, 3);
+	add_action( 'admin_notices', __CLASS__ . '::wc_bulk_edit_success');
   }
 
   /**
@@ -25,51 +33,561 @@ class Admin {
    * @return string
    */
   public static function plugin_url() {
-    return untrailingslashit( plugins_url( '/', GLASSES_PLUGIN_FILE ) );
+    return untrailingslashit(plugins_url('/', GLASSES_PLUGIN_FILE));
+  }
+
+  public static function enqueue_admin_assets() {
+	  $plugin_url = self::plugin_url();
+	  wp_enqueue_style('glasses', $plugin_url . '/assets/css/style.css');
+	  if (get_current_screen()->id === 'admin_page_glasses-loading') {
+		  wp_enqueue_script('glasses', $plugin_url . '/assets/js/main.js', ['jquery']);
+		  wp_localize_script('glasses', 'glasses', ['query_params' => $_SERVER['QUERY_STRING'], 'post_params' => ['categories' => $_POST['categories'] ?? '', 'description' => $_POST['prompt-response'] ?? '']]);
+	  }
+  }
+
+  public static function enable_woocommerce() {
+	  $class = 'notice notice-error';
+	  $message = __('Oops! Enable WooCommerce plugin to use Glasses for WooCommerce.', 'glasses-for-woocommerce');
+	  printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html($message));
   }
 
   public static function add_glasses_menu_page() {
+	$glasses_icon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKWwo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOmxheWVyTmFtZSBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6bWFzayBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCB0ZXh0CiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6d2lkdGggQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBwYXRoCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6YmxlbmRNb2RlIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93Q29sb3IgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgaW1hZ2UKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93UmFkaXVzIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93T2Zmc2V0IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFFTlRJVFkgJSBTVkcuZmlsdGVyLmV4dHJhLmNvbnRlbnQgICJ8IGZlRHJvcFNoYWRvdyIgPgo8IUVMRU1FTlQgZmVEcm9wU2hhZG93IEVNUFRZPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR4IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHN0ZERldmlhdGlvbiBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1vcGFjaXR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGluIENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHJlc3VsdCBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1jb2xvciBDREFUQSAjSU1QTElFRD4KXQo+CjwhLS0gQ3JlYXRlZCB3aXRoIFZlY3Rvcm5hdG9yIChodHRwOi8vdmVjdG9ybmF0b3IuaW8vKSAtLT4KPHN2ZyBoZWlnaHQ9IjEwMCUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3R5bGU9ImZpbGwtcnVsZTpub256ZXJvO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHdpZHRoPSIxMDAlIiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnZlY3Rvcm5hdG9yPSJodHRwOi8vdmVjdG9ybmF0b3IuaW8iIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPGRlZnMvPgo8ZyBpZD0iVW50aXRsZWQiIHZlY3Rvcm5hdG9yOmxheWVyTmFtZT0iVW50aXRsZWQiPgo8cGF0aCBkPSJNNDkzLjIzNCAyMzguODE5TDQ4Ni4xNzkgMjM4LjgxOUM0ODIuNDI1IDIxNC44MTEgNDcxLjA0NiAxOTIuNzM4IDQ1My43NTIgMTc2LjAxMkM0MzQuMDY4IDE1Ny4xMjQgNDA4LjQ2NyAxNDYuNjU2IDM4MS42MTQgMTQ2LjY1NkMzNTguMjg5IDE0Ni42NTYgMzM2LjEwMiAxNTQuMjggMzE3LjY2OSAxNjguNzNDMzAxLjk2OCAxODEuMDE4IDI5MC4xMzQgMTk3LjI4OSAyODIuOTY2IDIxNi4xNzdDMjc1LjAwMSAyMTAuOTQzIDI2NS40NDQgMjA3Ljg3MSAyNTYgMjA3Ljg3MUMyNDYuNTU2IDIwNy44NzEgMjM2Ljk5OSAyMTAuODI5IDIyOS4wMzQgMjE2LjE3N0MyMjEuOTc5IDE5Ny4yODkgMjEwLjE0NiAxODEuMDE4IDE5NC4zMzEgMTY4LjczQzE3NS44OTggMTU0LjI4IDE1My43MTEgMTQ2LjY1NiAxMzAuMzg2IDE0Ni42NTZDMTAzLjUzMyAxNDYuNjU2IDc3LjkzMjUgMTU3LjAxIDU4LjI0ODMgMTc1Ljc4NEM0MC45NTM2IDE5Mi43MzggMjkuNTc1NSAyMTQuOTI1IDI1LjgyMDcgMjM4LjkzM0wxOC43NjYzIDIzOC45MzNDOS42NjM3NyAyMzguOTMzIDIuMjY3OTkgMjQ2LjU1NiAyLjI2Nzk5IDI1NkMyLjI2Nzk5IDI2NS40NDQgOS42NjM3NyAyNzMuMDY3IDE4Ljc2NjMgMjczLjA2N0wyNS44MjA3IDI3My4wNjdDMjkuNTc1NSAyOTcuMTg5IDQwLjk1MzYgMzE5LjI2MiA1OC4yNDgzIDMzNS45ODhDNzcuOTMyNSAzNTQuODc2IDEwMy41MzMgMzY1LjM0NCAxMzAuMzg2IDM2NS4zNDRDMTg4Ljc1NSAzNjUuMzQ0IDIzNi4zMTYgMzE2LjQxOCAyMzYuMzE2IDI1Ni4yMjhMMjM2LjMxNiAyNTZDMjM2LjMxNiAyNDkuMjg3IDI0NC4xNjcgMjM5LjA0NyAyNTYgMjM5LjA0N0MyNjcuODMzIDIzOS4wNDcgMjc1LjY4NCAyNDkuMjg3IDI3NS42ODQgMjU2TDI3NS42ODQgMjU2LjExNEMyNzUuNjg0IDMxNi4zMDQgMzIzLjI0NSAzNjUuMjMgMzgxLjYxNCAzNjUuMjNDNDA4LjU4MSAzNjUuMjMgNDM0LjE4MSAzNTQuODc2IDQ1My43NTIgMzM1Ljg3NEM0NzEuMDQ2IDMxOS4xNDkgNDgyLjQyNSAyOTYuOTYxIDQ4Ni4xNzkgMjcyLjg0TDQ5My4yMzQgMjcyLjg0QzUwMi4zMzYgMjcyLjg0IDUwOS43MzIgMjY1LjIxNiA1MDkuNzMyIDI1NS43NzJDNTA5LjczMiAyNDYuNTU2IDUwMi4zMzYgMjM4LjgxOSA0OTMuMjM0IDIzOC44MTlaIiBmaWxsPSIjZjBmNmZjIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIG9wYWNpdHk9IjEiIHN0cm9rZT0ibm9uZSIvPgo8L2c+Cjwvc3ZnPgo=';
+
     add_menu_page(
       'Glasses for WooCommerce',
       'Glasses',
       'manage_options',
       'glasses',
-      __CLASS__ . '::glasses_settings_page',
-      'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKWwo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOmxheWVyTmFtZSBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6bWFzayBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCB0ZXh0CiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6d2lkdGggQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBwYXRoCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6YmxlbmRNb2RlIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93Q29sb3IgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgaW1hZ2UKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93UmFkaXVzIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93T2Zmc2V0IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFFTlRJVFkgJSBTVkcuZmlsdGVyLmV4dHJhLmNvbnRlbnQgICJ8IGZlRHJvcFNoYWRvdyIgPgo8IUVMRU1FTlQgZmVEcm9wU2hhZG93IEVNUFRZPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR4IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHN0ZERldmlhdGlvbiBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1vcGFjaXR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGluIENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHJlc3VsdCBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1jb2xvciBDREFUQSAjSU1QTElFRD4KXQo+CjwhLS0gQ3JlYXRlZCB3aXRoIFZlY3Rvcm5hdG9yIChodHRwOi8vdmVjdG9ybmF0b3IuaW8vKSAtLT4KPHN2ZyBoZWlnaHQ9IjEwMCUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3R5bGU9ImZpbGwtcnVsZTpub256ZXJvO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHdpZHRoPSIxMDAlIiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnZlY3Rvcm5hdG9yPSJodHRwOi8vdmVjdG9ybmF0b3IuaW8iIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPGRlZnMvPgo8ZyBpZD0iVW50aXRsZWQiIHZlY3Rvcm5hdG9yOmxheWVyTmFtZT0iVW50aXRsZWQiPgo8cGF0aCBkPSJNNDkzLjIzNCAyMzguODE5TDQ4Ni4xNzkgMjM4LjgxOUM0ODIuNDI1IDIxNC44MTEgNDcxLjA0NiAxOTIuNzM4IDQ1My43NTIgMTc2LjAxMkM0MzQuMDY4IDE1Ny4xMjQgNDA4LjQ2NyAxNDYuNjU2IDM4MS42MTQgMTQ2LjY1NkMzNTguMjg5IDE0Ni42NTYgMzM2LjEwMiAxNTQuMjggMzE3LjY2OSAxNjguNzNDMzAxLjk2OCAxODEuMDE4IDI5MC4xMzQgMTk3LjI4OSAyODIuOTY2IDIxNi4xNzdDMjc1LjAwMSAyMTAuOTQzIDI2NS40NDQgMjA3Ljg3MSAyNTYgMjA3Ljg3MUMyNDYuNTU2IDIwNy44NzEgMjM2Ljk5OSAyMTAuODI5IDIyOS4wMzQgMjE2LjE3N0MyMjEuOTc5IDE5Ny4yODkgMjEwLjE0NiAxODEuMDE4IDE5NC4zMzEgMTY4LjczQzE3NS44OTggMTU0LjI4IDE1My43MTEgMTQ2LjY1NiAxMzAuMzg2IDE0Ni42NTZDMTAzLjUzMyAxNDYuNjU2IDc3LjkzMjUgMTU3LjAxIDU4LjI0ODMgMTc1Ljc4NEM0MC45NTM2IDE5Mi43MzggMjkuNTc1NSAyMTQuOTI1IDI1LjgyMDcgMjM4LjkzM0wxOC43NjYzIDIzOC45MzNDOS42NjM3NyAyMzguOTMzIDIuMjY3OTkgMjQ2LjU1NiAyLjI2Nzk5IDI1NkMyLjI2Nzk5IDI2NS40NDQgOS42NjM3NyAyNzMuMDY3IDE4Ljc2NjMgMjczLjA2N0wyNS44MjA3IDI3My4wNjdDMjkuNTc1NSAyOTcuMTg5IDQwLjk1MzYgMzE5LjI2MiA1OC4yNDgzIDMzNS45ODhDNzcuOTMyNSAzNTQuODc2IDEwMy41MzMgMzY1LjM0NCAxMzAuMzg2IDM2NS4zNDRDMTg4Ljc1NSAzNjUuMzQ0IDIzNi4zMTYgMzE2LjQxOCAyMzYuMzE2IDI1Ni4yMjhMMjM2LjMxNiAyNTZDMjM2LjMxNiAyNDkuMjg3IDI0NC4xNjcgMjM5LjA0NyAyNTYgMjM5LjA0N0MyNjcuODMzIDIzOS4wNDcgMjc1LjY4NCAyNDkuMjg3IDI3NS42ODQgMjU2TDI3NS42ODQgMjU2LjExNEMyNzUuNjg0IDMxNi4zMDQgMzIzLjI0NSAzNjUuMjMgMzgxLjYxNCAzNjUuMjNDNDA4LjU4MSAzNjUuMjMgNDM0LjE4MSAzNTQuODc2IDQ1My43NTIgMzM1Ljg3NEM0NzEuMDQ2IDMxOS4xNDkgNDgyLjQyNSAyOTYuOTYxIDQ4Ni4xNzkgMjcyLjg0TDQ5My4yMzQgMjcyLjg0QzUwMi4zMzYgMjcyLjg0IDUwOS43MzIgMjY1LjIxNiA1MDkuNzMyIDI1NS43NzJDNTA5LjczMiAyNDYuNTU2IDUwMi4zMzYgMjM4LjgxOSA0OTMuMjM0IDIzOC44MTlaIiBmaWxsPSIjZjBmNmZjIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIG9wYWNpdHk9IjEiIHN0cm9rZT0ibm9uZSIvPgo8L2c+Cjwvc3ZnPgo=',
+      null,
+      $glasses_icon,
       66
     );
+
+	add_submenu_page(
+	  'glasses',
+	  __('Glasses Home', 'glasses-for-woocommerce'),
+	  __('Home', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses',
+	  __CLASS__ . '::glasses_home_page'
+	);
+
+	add_submenu_page(
+	  'glasses',
+	  __('Glasses New Store Categories', 'glasses-for-woocommerce'),
+	  __('New Store', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-new-store-categories',
+	  __CLASS__ . '::glasses_categories_page'
+	);
+
+	add_submenu_page(
+	  'glasses',
+	  __('Glasses New Product', 'glasses-for-woocommerce'),
+	  __('New Product', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-new-product',
+	  __CLASS__ . '::glasses_new_product_page'
+	);
+
+	add_submenu_page(
+	  'edit.php?post_type=product',
+	  __('Glasses New Product', 'glasses-for-woocommerce'),
+	  __('Add New with Glasses', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-new-product',
+	  __CLASS__ . '::glasses_new_product_page',
+	  2
+	);
+
+	add_submenu_page(
+	  'glasses',
+	  __('Glasses Edit Products', 'glasses-for-woocommerce'),
+	  __('Edit Products', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'edit.php?post_type=product',
+	);
+
+	add_submenu_page(
+	  'glasses',
+	  __('Glasses settings', 'glasses-for-woocommerce'),
+	  __('Settings', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-settings',
+	  __CLASS__ . '::glasses_settings_page'
+	);
+
+	add_submenu_page(
+	  null,
+	  __('Glasses Loading', 'glasses-for-woocommerce'),
+	  __('Loading', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-loading',
+	  __CLASS__ . '::glasses_loading_page'
+	);
+
+	add_submenu_page(
+	  null,
+	  __('Glasses New Store', 'glasses-for-woocommerce'),
+	  __('New Store Next', 'glasses-for-woocommerce' ),
+	  'manage_options',
+	  'glasses-new-store',
+	  __CLASS__ . '::glasses_new_store_page'
+	);
+  }
+
+  public static function glasses_home_page() {
+	echo '<div class="home_layout">';
+    echo '<h1>Glasses for WooCommerce</h1>';
+	echo '<p>Let AI set up the store for you.</p>';
+	echo '<div class="home_row">';
+	echo '<a href="?page=glasses-new-store-categories">';
+	echo '<div class="option">
+			<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+				<path d="M49.9184 30.6285V38.2394C49.9184 45.8502 46.8842 48.9013 39.2564 48.9013H30.12C29.1368 48.9013 28.2385 48.8505 27.4079 48.7318M19.458 37.9173V30.6285M34.6967 31.9507C37.7986 31.9507 40.087 29.425 39.7819 26.3231L38.6462 15H30.7302L29.5945 26.3231C29.2894 29.425 31.5947 31.9507 34.6967 31.9507Z" stroke="#343434" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M45.3759 31.9507C48.7999 31.9507 51.3086 29.1708 50.9696 25.7637L50.495 21.1022C49.8848 16.6951 48.1897 15 43.7486 15H38.5787L39.7652 26.8824C40.0703 29.6793 42.579 31.9507 45.3759 31.9507ZM23.9163 31.9507C26.7132 31.9507 29.2388 29.6793 29.5101 26.8824L29.883 23.1363L30.6966 15H25.5266C21.0856 15 19.3905 16.6951 18.7803 21.1022L18.3057 25.7637C17.9666 29.1708 20.4923 31.9507 23.9163 31.9507Z" stroke="#343434" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M25.3059 43.7822H20.2546M22.7803 41.3074V46.3757M29.5605 43.8161C29.5605 45.0874 29.2046 46.2909 28.5774 47.308C28.2553 47.8504 27.8655 48.342 27.4078 48.7318C27.357 48.7996 27.3061 48.8505 27.2383 48.9013C26.0518 49.9692 24.4923 50.5964 22.7803 50.5964C20.7123 50.5964 18.8647 49.6641 17.6442 48.2064C17.6103 48.1555 17.5595 48.1216 17.5256 48.0707C17.3222 47.8334 17.1357 47.5792 16.9831 47.308C16.356 46.2909 16 45.0874 16 43.8161C16 41.6803 16.9831 39.7649 18.5426 38.5275C18.8308 38.2902 19.1359 38.0868 19.4579 37.9173C20.4411 37.3579 21.5768 37.0359 22.7803 37.0359C24.4753 37.0359 26.0009 37.6461 27.1874 38.6801C27.3909 38.8326 27.5773 39.0191 27.7468 39.2055C28.8656 40.426 29.5605 42.0363 29.5605 43.8161Z" stroke="#343434" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<p>Create a New Store</p>
+		</div>';
+	echo '</a>';
+	echo '<a href="?page=glasses-new-products">';
+	echo '<div class="option">
+			<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+				<path d="M16.8667 23.5167H48.4668M26.8667 15.1833V23.2834M38.4668 15.1833V22.5334M49.3335 26.6667V36.6667C49.3335 37.0501 49.3335 37.4168 49.3001 37.7834C49.2335 37.6834 49.1501 37.5834 49.0668 37.5001C49.0501 37.4834 49.0335 37.4501 49.0168 37.4334C47.6668 35.9334 45.6834 35.0001 43.5001 35.0001C41.4001 35.0001 39.4834 35.8667 38.1168 37.2667C36.9635 38.4564 36.2367 39.9944 36.0498 41.6407C35.8628 43.287 36.2263 44.9488 37.0834 46.3668C37.4501 46.9835 37.9167 47.5501 38.4501 48.0168C38.4834 48.0335 38.5001 48.0501 38.5168 48.0668C38.6001 48.1501 38.6834 48.2168 38.7834 48.3001C38.4334 48.3335 38.0501 48.3335 37.6667 48.3335H27.6667C19.3333 48.3335 16 45.0001 16 36.6667V26.6667C16 18.3333 19.3333 15 27.6667 15H37.6667C46.0001 15 49.3335 18.3333 49.3335 26.6667Z" stroke="#343434" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M46.2999 42.4668H40.6999M43.4999 39.7334V45.3334M51 42.5001C51 43.1001 50.9333 43.6834 50.7833 44.2501C50.6 45.0001 50.3 45.7168 49.9166 46.3668C49.2522 47.4752 48.3118 48.3925 47.1872 49.0293C46.0627 49.6661 44.7923 50.0006 43.4999 50.0001C41.7813 50.0084 40.1156 49.406 38.7999 48.3001H38.7832C38.6832 48.2168 38.5999 48.1501 38.5166 48.0668C38.4976 48.0462 38.475 48.0292 38.4499 48.0168C37.9166 47.5501 37.4499 46.9834 37.0832 46.3668C36.2261 44.9488 35.8627 43.287 36.0496 41.6407C36.2366 39.9944 36.9634 38.4564 38.1166 37.2667C39.4833 35.8667 41.3999 35.0001 43.4999 35.0001C45.6833 35.0001 47.6666 35.9334 49.0166 37.4334C49.0333 37.4501 49.05 37.4834 49.0666 37.5001C49.15 37.5834 49.2333 37.6834 49.3 37.7834C50.3666 39.0667 51 40.7167 51 42.5001Z" stroke="#343434" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<p>Add New Products</p>
+		</div>';
+	echo '</a>';
+	echo '<a href="edit.php?post_type=product">';
+	echo '<div class="option">
+			<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+				<path d="M31.5547 15.4342H28.0981C19.4566 15.4342 16 18.8908 16 27.5323V37.9021C16 46.5436 19.4566 50.0002 28.0981 50.0002H38.4679C47.1094 50.0002 50.566 46.5436 50.566 37.9021V34.4455" stroke="#343434" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M40.2651 17.1971L26.6461 30.8161C26.1276 31.3346 25.6091 32.3543 25.5054 33.0974L24.7622 38.2996C24.4857 40.1835 25.8165 41.497 27.7003 41.2377L32.9025 40.4946C33.6284 40.3909 34.6481 39.8724 35.1839 39.3539L48.8029 25.7349C51.1534 23.3844 52.2595 20.6537 48.8029 17.1971C45.3463 13.7405 42.6156 14.8466 40.2651 17.1971Z" stroke="#343434" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M38.3123 19.1501C38.8853 21.1851 39.9714 23.0389 41.4663 24.5338C42.9613 26.0288 44.815 27.1148 46.8501 27.6879" stroke="#343434" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<p>Edit Existing Products</p>
+		</div>';
+	echo '</a>';
+	echo '</div>';
+	echo '</div>';
+  }
+
+  public static function glasses_new_store_page() {
+	  $categories = $_POST['categories'];
+	  echo '<div class="new_store_layout">';
+	  echo '<div class="new_store_prompt_box">';
+	  echo '<h1>Describe Your Store</h1>';
+	  echo '<p>Talk about your store in as many words as you would like.</p>';
+	  echo '<form method="POST" class="prompt_layout" action="?page=glasses-loading"><textarea class="new_store_prompt_box--input" name="prompt-response"></textarea>';
+	  foreach ($categories as $category) {
+		  echo '<input type="hidden" name="categories[]" value="' . $category . '">';
+	  }
+	  echo '<input type="hidden" name="thisIsAStore" value="store">';
+	  echo '<div class="back_next_layout">
+			<a href="?page=glasses-new-store-categories">
+			<div class="back">
+				<svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0.000390744 6L6.00039 -6.11959e-08L7.40039 1.4L2.80039 6L7.40039 10.6L6.00039 12L0.000390744 6Z" fill="#475AFF"/>
+				</svg>
+			</div>
+			</a>
+			<input class="next_button" type="submit" value="Next">
+			</div>';
+	  echo '</form>';
+	  echo '</div>';
+	  echo '</div>';
+  }
+
+  public static function glasses_new_product_page() {
+	  echo '<div class="new_products_layout">';
+	  echo '<div class="new_products_prompt_box">';
+	  echo '<div class="back_title_layout">';
+	  echo '<a href="?page=glasses">';
+	  echo '<div class="products_back">
+				<svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0.6 6L6.6 -6.11959e-08L8 1.4L3.4 6L8 10.6L6.6 12L0.6 6Z" fill="#343434"/>
+				</svg>
+			</div>';
+	  echo '</a>';
+	  echo '<h1>Add New Product</h1>';
+	  echo '</div>';
+	  echo '<form id="add_products_form" method="POST" class="add_products_form" action="?page=glasses-loading">';
+	  echo '<label id="categories-label" for="categories">Select a Category</label>';
+	  echo '<select name="categories" id="categories">';
+	  echo '<option value="clothing">Clothing</option>
+			<option value="sports">Sports</option>
+			<option value="electronics">Electronics</option>
+			<option value="books">Books</option>
+			<option value="toys">Toys</option>
+			<option value="food">Food</option>
+			<option value="health">Health</option>
+			<option value="beauty">Beauty</option>';
+	  echo '</select>';
+	  echo '<label id="description-label" for="prompt-response">Add Description for Product</label>';
+	  echo '<textarea id="prompt-response" class="new_products_prompt_box--input" name="prompt-response" form="add_products_form"></textarea>';
+	  echo '<input class="add_button" type="submit" value="Add Products">';
+	  echo '</form>';
+	  echo '</div>';
+	  echo '</div>';
   }
 
   public static function glasses_settings_page() {
-    echo '<h1>Glasses for WooCommerce</h1>';
-    echo '<p class="glasses__description">
-            Clicking the button below will loop through all of your published products and assign a color attribute to 
-            them auto-magically. Review the colors <a target="_blank" href="edit-tags.php?taxonomy=pa_glasses_color&post_type=product">here</a> 
-            to change them to more friendly names.
-          </p>';
+	  echo '<h1>Glasses for WooCommerce - Settings</h1>';
+	  echo '<form method="POST" action="options.php">';
+	  add_settings_section(
+		  'api-keys',
+		  __('API Keys', 'glasses'),
+		  function() {
+			  echo '<p>For all functionality besides color identification, we must use an Open AI API <br> key which can be created or found <a href="https://platform.openai.com/account/api-keys">here</a> after signing up first (it is free): </p>';
+		  },
+		  'glasses-settings',
+	  );
+	  add_settings_field(
+		  'open-ai-api-key',
+		  __('Open AI API Key', 'glasses'),
+		  function() {
+			  echo '<input name="open-ai-api-key" id="open-ai-api-key" type="text" placeholder="Openai API Key" value="' . get_option('open-ai-api-key') . '">';
+		  },
+		  'glasses-settings',
+		  'api-keys',
+		  [
+			  'label_for' => 'open-ai-api-key',
+			  'class'     => 'open-ai-api-key',
+		  ]
+	  );
 
-    if (!class_exists('WooCommerce')) {
-      echo '<div class="glasses__process-data" data-process style="filter: grayscale(1)">Process Colors</div>';
-      return;
-    }
+	  add_settings_section(
+		  'glasses-product-view',
+		  __('Glasses Product View', 'glasses'),
+		  function() {
+			  echo '<p>Prefer the classic woocommerce product view columns on <a href="edit.php?post_type=product">this</a> page?</p>';
+		  },
+		  'glasses-settings',
+	  );
+	  add_settings_field(
+		  'glasses-product-view-option',
+		  __('Classic view', 'glasses'),
+		  function() {
+			  echo '<input name="glasses-product-view-option" id="glasses-product-view-option" type="checkbox" value="1"' . checked('1', get_option('glasses-product-view-option'), false) . '></input>';
+		  },
+		  'glasses-settings',
+		  'glasses-product-view',
+		  [
+			  'label_for' => 'glasses-product-view-option',
+			  'class'     => 'glasses-product-view-option',
+		  ]
+	  );
 
-    echo '<button type="button" class="glasses__process-data" data-process>
-        <div class="button__progress"></div>
-        <span class="button__text">Process Colors</span>
-	  </button>';
-
-	echo '<div id="progress"></div>';
+	  add_settings_section(
+		  'glasses-how-many',
+		  __('Glasses How Many Products', 'glasses'),
+		  function() {
+			  echo '<p>How many products would you like created when making a new store?</p>';
+		  },
+		  'glasses-settings',
+	  );
+	  add_settings_field(
+		  'glasses-how-many',
+		  __('Number of products created (default 10)', 'glasses'),
+		  function() {
+			  echo '<input name="glasses-how-many" id="glasses-how-many" type="text" placeholder="10" value="' . get_option('glasses-how-many') . '">';
+		  },
+		  'glasses-settings',
+		  'glasses-how-many',
+		  [
+			  'label_for' => 'glasses-how-many',
+			  'class'     => 'glasses-how-many',
+		  ]
+	  );
+	  settings_fields('glasses-settings');
+	  do_settings_sections('glasses-settings');
+	  submit_button();
+	  echo '</form>';
   }
 
-  public static function enqueue_admin_assets() {
-    $plugin_url = self::plugin_url();
-    wp_enqueue_style('glasses', $plugin_url . '/assets/css/style.css');
-    wp_enqueue_script('glasses', $plugin_url . '/assets/js/main.js', ['jquery']);
+  public static function register_settings() {
+	  register_setting('glasses-settings', 'open-ai-api-key');
+	  register_setting('glasses-settings', 'glasses-product-view-option');
+	  register_setting('glasses-settings', 'glasses-how-many');
   }
 
-  public static function enable_woocommerce() {
-    $class = 'notice notice-error';
-    $message = __('Oops! Enable WooCommerce plugin to use Glasses for WooCommerce.', 'glasses-for-woocommerce');
-    printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html($message));
+  public static function glasses_loading_page() {
+	  echo '<div class="loading_layout">';
+	  echo '<div class="loading-icon">
+				<svg class="loading-svg" width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<circle cx="50" cy="50" r="50" fill="white"/>
+					<path d="M48.3901 76.02V66.83" stroke="#475AFF" stroke-width="2.4" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M26.3398 70.55C26.3398 70.55 30.1198 72.89 37.4298 72.73" stroke="#475AFF" stroke-width="2.4" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M53.9302 23C53.9302 23 59.8602 24.43 63.0302 31.09" stroke="#475AFF" stroke-width="2.4" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M38.86 67.78H36C28.16 67.11 22 60.53 22 52.51C22 46.47 25.5 41.25 30.56 38.74C32.12 31.92 38.22 26.83 45.52 26.83C52.68 26.83 58.69 31.74 60.39 38.36C61.1 38.22 61.83 38.15 62.57 38.15C68.7 38.15 73.67 43.11 73.67 49.24V49.42C77.95 50.26 81.19 54.03 81.19 58.55C81.19 63.69 77.02 67.86 71.88 67.86L58.76 67.8" stroke="#475AFF" stroke-width="2.4" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M52.8401 72.07V54.59H57.2001L48.3901 43.3L39.5801 54.59H43.9401V72.07" stroke="#475AFF" stroke-width="2.4" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+				<span class="outer-circle-1"></span>
+				<span class="outer-circle-2"></span>
+				<span class="outer-circle-3"></span>
+			</div>';
+	  echo '<div class="loading_bar">
+				<div class="loading_format">
+					<div class="glasses__process-data" data-process></div>
+					<div class="button__progress"></div>
+				</div>
+				<p id="progress"></p>
+			</div>';
+	  echo '</div>';
+  }
+
+  public static function glasses_categories_page() {
+	  $categories = [
+		  'Clothing' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<mask id="path-2-outside-1_31_7140" maskUnits="userSpaceOnUse" x="17" y="14" width="31" height="37" fill="black">
+							<rect fill="white" x="17" y="14" width="31" height="37"/>
+							<path d="M45.2223 20.5642L42.4532 19.0231C42.445 19.0188 42.4363 19.0174 42.4281 19.0133C42.4199 19.0092 42.4158 19.0045 42.4086 19.0015L39.6803 17.834C39.7827 17.5059 39.8062 17.1584 39.7489 16.8195C39.6917 16.4807 39.5552 16.1602 39.3507 15.884C39.1462 15.6078 38.8794 15.3839 38.572 15.2303C38.2646 15.0767 37.9253 14.9978 37.5817 15H37.2464C36.8561 15.0004 36.473 15.1046 36.1362 15.3018C35.7994 15.4991 35.5212 15.7823 35.3299 16.1225L35.0149 16.6822H30.5579L30.244 16.1225C30.0527 15.7823 29.7744 15.4991 29.4377 15.3018C29.1009 15.1046 28.7177 15.0004 28.3274 15H27.9922C27.6486 14.9978 27.3093 15.0767 27.0019 15.2303C26.6945 15.3839 26.4277 15.6078 26.2232 15.884C26.0187 16.1602 25.8822 16.4807 25.8249 16.8195C25.7677 17.1584 25.7912 17.5059 25.8936 17.834L23.1652 19.0015C23.1581 19.0045 23.1526 19.01 23.1458 19.0133C23.139 19.0166 23.1289 19.0188 23.1207 19.0231L20.3516 20.5642C19.6388 20.9616 19.045 21.542 18.6316 22.2456C18.2182 22.9492 18.0001 23.7505 18 24.5665V42.3438C18.0006 42.8331 18.1952 43.3022 18.5412 43.6482C18.8872 43.9942 19.3564 44.1889 19.8457 44.1895H22.8748V46.7849C22.8748 46.9118 22.9253 47.0336 23.015 47.1233C23.1047 47.213 23.2264 47.2634 23.3534 47.2634H24.1737V48.1543C24.1742 48.6436 24.3689 49.1128 24.7149 49.4588C25.0609 49.8048 25.53 49.9994 26.0194 50H39.5545C40.0438 49.9994 40.513 49.8048 40.859 49.4588C41.205 49.1128 41.3996 48.6436 41.4002 48.1543V47.2634H42.2205C42.3474 47.2634 42.4691 47.213 42.5589 47.1233C42.6486 47.0336 42.699 46.9118 42.699 46.7849V44.1895H45.7295C46.2189 44.1889 46.688 43.9942 47.034 43.6482C47.38 43.3022 47.5747 42.8331 47.5752 42.3438V24.5665C47.575 23.7503 47.3567 22.949 46.9431 22.2454C46.5294 21.5418 45.9354 20.9614 45.2223 20.5642ZM46.6182 24.5665V40.6348H42.699V20.2552L44.7569 21.4007C45.321 21.7148 45.7909 22.1739 46.1181 22.7304C46.4454 23.287 46.618 23.9209 46.6182 24.5665ZM37.2464 15.9571H37.5817C37.811 15.9566 38.036 16.0199 38.2315 16.1398C38.4271 16.2597 38.5855 16.4315 38.6891 16.6362C38.7927 16.8408 38.8375 17.0702 38.8184 17.2988C38.7993 17.5273 38.7172 17.7461 38.5811 17.9307C38.4685 18.0844 38.3227 18.2106 38.1545 18.2999L33.9901 20.4663L35.7127 17.3948L36.1636 16.5912C36.2716 16.3989 36.4288 16.2388 36.6191 16.1274C36.8094 16.0159 37.0259 15.9571 37.2464 15.9571ZM34.4779 17.6393L32.7869 20.6528L31.096 17.6393H34.4779ZM27.9922 15.9571H28.3274C28.5479 15.9571 28.7645 16.0158 28.9548 16.1272C29.145 16.2386 29.3023 16.3987 29.4103 16.5909L29.8612 17.3945L31.5838 20.4661L29.8612 19.5697L27.4194 18.2999C27.2511 18.2107 27.1052 18.0845 26.9928 17.9307C26.8567 17.7461 26.7745 17.5273 26.7555 17.2988C26.7364 17.0702 26.7811 16.8408 26.8848 16.6362C26.9884 16.4315 27.1468 16.2597 27.3423 16.1398C27.5379 16.0199 27.7628 15.9566 27.9922 15.9571ZM20.8169 21.4007L22.8748 20.2552V40.6348H18.9557V24.5665C18.9559 23.9209 19.1285 23.287 19.4557 22.7304C19.7829 22.1739 20.2529 21.7148 20.8169 21.4007ZM19.8443 43.2324C19.6087 43.2321 19.3829 43.1384 19.2163 42.9718C19.0497 42.8052 18.956 42.5794 18.9557 42.3438V41.5918H22.8748V43.2324H19.8443ZM40.4432 48.1543C40.4429 48.3899 40.3492 48.6158 40.1826 48.7824C40.016 48.949 39.7901 49.0427 39.5545 49.043H26.0194C25.7838 49.0427 25.5579 48.949 25.3913 48.7824C25.2247 48.6158 25.131 48.3899 25.1307 48.1543V47.2634H40.4432V48.1543ZM41.742 46.3064H23.8319V19.7579L26.3171 18.6945H26.383C26.5538 18.879 26.755 19.033 26.9778 19.1497L29.9473 20.6944V28.7176C29.9473 28.8445 29.9977 28.9662 30.0874 29.0559C30.1772 29.1457 30.2989 29.1961 30.4258 29.1961C30.5527 29.1961 30.6744 29.1457 30.7642 29.0559C30.8539 28.9662 30.9043 28.8445 30.9043 28.7176V21.1912L32.566 22.0547C32.6344 22.0896 32.7101 22.1078 32.7869 22.1078C32.8637 22.1078 32.9395 22.0896 33.0079 22.0547L34.6695 21.1904V28.7176C34.6695 28.8445 34.72 28.9662 34.8097 29.0559C34.8994 29.1457 35.0212 29.1961 35.1481 29.1961C35.275 29.1961 35.3967 29.1457 35.4864 29.0559C35.5762 28.9662 35.6266 28.8445 35.6266 28.7176V20.6936L38.5961 19.1489C38.819 19.0324 39.0201 18.8784 39.1908 18.6936H39.2567L41.742 19.7579V46.3086V46.3064ZM46.6182 42.3438C46.6179 42.5794 46.5242 42.8052 46.3576 42.9718C46.191 43.1384 45.9651 43.2321 45.7295 43.2324H42.699V41.5918H46.6182V42.3438Z"/>
+							</mask>
+							<path d="M45.2223 20.5642L42.4532 19.0231C42.445 19.0188 42.4363 19.0174 42.4281 19.0133C42.4199 19.0092 42.4158 19.0045 42.4086 19.0015L39.6803 17.834C39.7827 17.5059 39.8062 17.1584 39.7489 16.8195C39.6917 16.4807 39.5552 16.1602 39.3507 15.884C39.1462 15.6078 38.8794 15.3839 38.572 15.2303C38.2646 15.0767 37.9253 14.9978 37.5817 15H37.2464C36.8561 15.0004 36.473 15.1046 36.1362 15.3018C35.7994 15.4991 35.5212 15.7823 35.3299 16.1225L35.0149 16.6822H30.5579L30.244 16.1225C30.0527 15.7823 29.7744 15.4991 29.4377 15.3018C29.1009 15.1046 28.7177 15.0004 28.3274 15H27.9922C27.6486 14.9978 27.3093 15.0767 27.0019 15.2303C26.6945 15.3839 26.4277 15.6078 26.2232 15.884C26.0187 16.1602 25.8822 16.4807 25.8249 16.8195C25.7677 17.1584 25.7912 17.5059 25.8936 17.834L23.1652 19.0015C23.1581 19.0045 23.1526 19.01 23.1458 19.0133C23.139 19.0166 23.1289 19.0188 23.1207 19.0231L20.3516 20.5642C19.6388 20.9616 19.045 21.542 18.6316 22.2456C18.2182 22.9492 18.0001 23.7505 18 24.5665V42.3438C18.0006 42.8331 18.1952 43.3022 18.5412 43.6482C18.8872 43.9942 19.3564 44.1889 19.8457 44.1895H22.8748V46.7849C22.8748 46.9118 22.9253 47.0336 23.015 47.1233C23.1047 47.213 23.2264 47.2634 23.3534 47.2634H24.1737V48.1543C24.1742 48.6436 24.3689 49.1128 24.7149 49.4588C25.0609 49.8048 25.53 49.9994 26.0194 50H39.5545C40.0438 49.9994 40.513 49.8048 40.859 49.4588C41.205 49.1128 41.3996 48.6436 41.4002 48.1543V47.2634H42.2205C42.3474 47.2634 42.4691 47.213 42.5589 47.1233C42.6486 47.0336 42.699 46.9118 42.699 46.7849V44.1895H45.7295C46.2189 44.1889 46.688 43.9942 47.034 43.6482C47.38 43.3022 47.5747 42.8331 47.5752 42.3438V24.5665C47.575 23.7503 47.3567 22.949 46.9431 22.2454C46.5294 21.5418 45.9354 20.9614 45.2223 20.5642ZM46.6182 24.5665V40.6348H42.699V20.2552L44.7569 21.4007C45.321 21.7148 45.7909 22.1739 46.1181 22.7304C46.4454 23.287 46.618 23.9209 46.6182 24.5665ZM37.2464 15.9571H37.5817C37.811 15.9566 38.036 16.0199 38.2315 16.1398C38.4271 16.2597 38.5855 16.4315 38.6891 16.6362C38.7927 16.8408 38.8375 17.0702 38.8184 17.2988C38.7993 17.5273 38.7172 17.7461 38.5811 17.9307C38.4685 18.0844 38.3227 18.2106 38.1545 18.2999L33.9901 20.4663L35.7127 17.3948L36.1636 16.5912C36.2716 16.3989 36.4288 16.2388 36.6191 16.1274C36.8094 16.0159 37.0259 15.9571 37.2464 15.9571ZM34.4779 17.6393L32.7869 20.6528L31.096 17.6393H34.4779ZM27.9922 15.9571H28.3274C28.5479 15.9571 28.7645 16.0158 28.9548 16.1272C29.145 16.2386 29.3023 16.3987 29.4103 16.5909L29.8612 17.3945L31.5838 20.4661L29.8612 19.5697L27.4194 18.2999C27.2511 18.2107 27.1052 18.0845 26.9928 17.9307C26.8567 17.7461 26.7745 17.5273 26.7555 17.2988C26.7364 17.0702 26.7811 16.8408 26.8848 16.6362C26.9884 16.4315 27.1468 16.2597 27.3423 16.1398C27.5379 16.0199 27.7628 15.9566 27.9922 15.9571ZM20.8169 21.4007L22.8748 20.2552V40.6348H18.9557V24.5665C18.9559 23.9209 19.1285 23.287 19.4557 22.7304C19.7829 22.1739 20.2529 21.7148 20.8169 21.4007ZM19.8443 43.2324C19.6087 43.2321 19.3829 43.1384 19.2163 42.9718C19.0497 42.8052 18.956 42.5794 18.9557 42.3438V41.5918H22.8748V43.2324H19.8443ZM40.4432 48.1543C40.4429 48.3899 40.3492 48.6158 40.1826 48.7824C40.016 48.949 39.7901 49.0427 39.5545 49.043H26.0194C25.7838 49.0427 25.5579 48.949 25.3913 48.7824C25.2247 48.6158 25.131 48.3899 25.1307 48.1543V47.2634H40.4432V48.1543ZM41.742 46.3064H23.8319V19.7579L26.3171 18.6945H26.383C26.5538 18.879 26.755 19.033 26.9778 19.1497L29.9473 20.6944V28.7176C29.9473 28.8445 29.9977 28.9662 30.0874 29.0559C30.1772 29.1457 30.2989 29.1961 30.4258 29.1961C30.5527 29.1961 30.6744 29.1457 30.7642 29.0559C30.8539 28.9662 30.9043 28.8445 30.9043 28.7176V21.1912L32.566 22.0547C32.6344 22.0896 32.7101 22.1078 32.7869 22.1078C32.8637 22.1078 32.9395 22.0896 33.0079 22.0547L34.6695 21.1904V28.7176C34.6695 28.8445 34.72 28.9662 34.8097 29.0559C34.8994 29.1457 35.0212 29.1961 35.1481 29.1961C35.275 29.1961 35.3967 29.1457 35.4864 29.0559C35.5762 28.9662 35.6266 28.8445 35.6266 28.7176V20.6936L38.5961 19.1489C38.819 19.0324 39.0201 18.8784 39.1908 18.6936H39.2567L41.742 19.7579V46.3086V46.3064ZM46.6182 42.3438C46.6179 42.5794 46.5242 42.8052 46.3576 42.9718C46.191 43.1384 45.9651 43.2321 45.7295 43.2324H42.699V41.5918H46.6182V42.3438Z" fill="#343434"/>
+							<path d="M45.2223 20.5642L42.4532 19.0231C42.445 19.0188 42.4363 19.0174 42.4281 19.0133C42.4199 19.0092 42.4158 19.0045 42.4086 19.0015L39.6803 17.834C39.7827 17.5059 39.8062 17.1584 39.7489 16.8195C39.6917 16.4807 39.5552 16.1602 39.3507 15.884C39.1462 15.6078 38.8794 15.3839 38.572 15.2303C38.2646 15.0767 37.9253 14.9978 37.5817 15H37.2464C36.8561 15.0004 36.473 15.1046 36.1362 15.3018C35.7994 15.4991 35.5212 15.7823 35.3299 16.1225L35.0149 16.6822H30.5579L30.244 16.1225C30.0527 15.7823 29.7744 15.4991 29.4377 15.3018C29.1009 15.1046 28.7177 15.0004 28.3274 15H27.9922C27.6486 14.9978 27.3093 15.0767 27.0019 15.2303C26.6945 15.3839 26.4277 15.6078 26.2232 15.884C26.0187 16.1602 25.8822 16.4807 25.8249 16.8195C25.7677 17.1584 25.7912 17.5059 25.8936 17.834L23.1652 19.0015C23.1581 19.0045 23.1526 19.01 23.1458 19.0133C23.139 19.0166 23.1289 19.0188 23.1207 19.0231L20.3516 20.5642C19.6388 20.9616 19.045 21.542 18.6316 22.2456C18.2182 22.9492 18.0001 23.7505 18 24.5665V42.3438C18.0006 42.8331 18.1952 43.3022 18.5412 43.6482C18.8872 43.9942 19.3564 44.1889 19.8457 44.1895H22.8748V46.7849C22.8748 46.9118 22.9253 47.0336 23.015 47.1233C23.1047 47.213 23.2264 47.2634 23.3534 47.2634H24.1737V48.1543C24.1742 48.6436 24.3689 49.1128 24.7149 49.4588C25.0609 49.8048 25.53 49.9994 26.0194 50H39.5545C40.0438 49.9994 40.513 49.8048 40.859 49.4588C41.205 49.1128 41.3996 48.6436 41.4002 48.1543V47.2634H42.2205C42.3474 47.2634 42.4691 47.213 42.5589 47.1233C42.6486 47.0336 42.699 46.9118 42.699 46.7849V44.1895H45.7295C46.2189 44.1889 46.688 43.9942 47.034 43.6482C47.38 43.3022 47.5747 42.8331 47.5752 42.3438V24.5665C47.575 23.7503 47.3567 22.949 46.9431 22.2454C46.5294 21.5418 45.9354 20.9614 45.2223 20.5642ZM46.6182 24.5665V40.6348H42.699V20.2552L44.7569 21.4007C45.321 21.7148 45.7909 22.1739 46.1181 22.7304C46.4454 23.287 46.618 23.9209 46.6182 24.5665ZM37.2464 15.9571H37.5817C37.811 15.9566 38.036 16.0199 38.2315 16.1398C38.4271 16.2597 38.5855 16.4315 38.6891 16.6362C38.7927 16.8408 38.8375 17.0702 38.8184 17.2988C38.7993 17.5273 38.7172 17.7461 38.5811 17.9307C38.4685 18.0844 38.3227 18.2106 38.1545 18.2999L33.9901 20.4663L35.7127 17.3948L36.1636 16.5912C36.2716 16.3989 36.4288 16.2388 36.6191 16.1274C36.8094 16.0159 37.0259 15.9571 37.2464 15.9571ZM34.4779 17.6393L32.7869 20.6528L31.096 17.6393H34.4779ZM27.9922 15.9571H28.3274C28.5479 15.9571 28.7645 16.0158 28.9548 16.1272C29.145 16.2386 29.3023 16.3987 29.4103 16.5909L29.8612 17.3945L31.5838 20.4661L29.8612 19.5697L27.4194 18.2999C27.2511 18.2107 27.1052 18.0845 26.9928 17.9307C26.8567 17.7461 26.7745 17.5273 26.7555 17.2988C26.7364 17.0702 26.7811 16.8408 26.8848 16.6362C26.9884 16.4315 27.1468 16.2597 27.3423 16.1398C27.5379 16.0199 27.7628 15.9566 27.9922 15.9571ZM20.8169 21.4007L22.8748 20.2552V40.6348H18.9557V24.5665C18.9559 23.9209 19.1285 23.287 19.4557 22.7304C19.7829 22.1739 20.2529 21.7148 20.8169 21.4007ZM19.8443 43.2324C19.6087 43.2321 19.3829 43.1384 19.2163 42.9718C19.0497 42.8052 18.956 42.5794 18.9557 42.3438V41.5918H22.8748V43.2324H19.8443ZM40.4432 48.1543C40.4429 48.3899 40.3492 48.6158 40.1826 48.7824C40.016 48.949 39.7901 49.0427 39.5545 49.043H26.0194C25.7838 49.0427 25.5579 48.949 25.3913 48.7824C25.2247 48.6158 25.131 48.3899 25.1307 48.1543V47.2634H40.4432V48.1543ZM41.742 46.3064H23.8319V19.7579L26.3171 18.6945H26.383C26.5538 18.879 26.755 19.033 26.9778 19.1497L29.9473 20.6944V28.7176C29.9473 28.8445 29.9977 28.9662 30.0874 29.0559C30.1772 29.1457 30.2989 29.1961 30.4258 29.1961C30.5527 29.1961 30.6744 29.1457 30.7642 29.0559C30.8539 28.9662 30.9043 28.8445 30.9043 28.7176V21.1912L32.566 22.0547C32.6344 22.0896 32.7101 22.1078 32.7869 22.1078C32.8637 22.1078 32.9395 22.0896 33.0079 22.0547L34.6695 21.1904V28.7176C34.6695 28.8445 34.72 28.9662 34.8097 29.0559C34.8994 29.1457 35.0212 29.1961 35.1481 29.1961C35.275 29.1961 35.3967 29.1457 35.4864 29.0559C35.5762 28.9662 35.6266 28.8445 35.6266 28.7176V20.6936L38.5961 19.1489C38.819 19.0324 39.0201 18.8784 39.1908 18.6936H39.2567L41.742 19.7579V46.3086V46.3064ZM46.6182 42.3438C46.6179 42.5794 46.5242 42.8052 46.3576 42.9718C46.191 43.1384 45.9651 43.2321 45.7295 43.2324H42.699V41.5918H46.6182V42.3438Z" stroke="#343434" stroke-width="0.4" mask="url(#path-2-outside-1_31_7140)"/>
+							<path d="M36.6946 35.7043L36.6947 35.7044L39.4312 42.5856L36.6946 35.7043ZM36.6946 35.7043C36.6517 35.5968 36.5776 35.5047 36.4817 35.4398C36.3858 35.375 36.2727 35.3404 36.157 35.3406M36.6946 35.7043L36.1572 35.4406M28.8794 35.7044L28.8794 35.7043C28.9223 35.5968 28.9965 35.5047 29.0924 35.4398C29.1882 35.375 29.3013 35.3404 29.417 35.3406M28.8794 35.7044L36.1572 35.4406M28.8794 35.7044L26.1429 42.5856L26.2358 42.6227L26.1428 42.5857L26.1429 42.5856C26.1078 42.6734 26.0948 42.7684 26.105 42.8624C26.1152 42.9564 26.1483 43.0465 26.2013 43.1248C26.2543 43.203 26.3257 43.2671 26.4092 43.3114C26.4927 43.3557 26.5858 43.3789 26.6804 43.3789H26.6804M28.8794 35.7044L26.6804 43.3789M29.417 35.3406C29.417 35.3406 29.4171 35.3406 29.4171 35.3406L29.4169 35.4406V35.3406H29.417ZM29.417 35.3406L36.157 35.3406M36.157 35.3406L36.1572 35.4406M36.157 35.3406L36.1572 35.3406V35.4406M26.6804 43.3789H38.8937H38.8937M26.6804 43.3789H38.8937M38.8937 43.3789C38.9883 43.3789 39.0814 43.3557 39.1649 43.3114M38.8937 43.3789L39.1649 43.3114M39.1649 43.3114C39.2484 43.2671 39.3198 43.203 39.3728 43.1248M39.1649 43.3114L39.3728 43.1248M39.3728 43.1248C39.4258 43.0465 39.4589 42.9564 39.4691 42.8624M39.3728 43.1248L39.4691 42.8624M39.4691 42.8624C39.4792 42.7685 39.4663 42.6735 39.4312 42.5857L39.4691 42.8624ZM35.7647 36.4965L38.0411 42.2211H27.5343L29.8094 36.4965H35.7647Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+						</svg>',
+		  'Electronics' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M33.2367 39.4087C33.5752 39.4087 33.8494 39.1345 33.8494 38.796C33.8494 38.4576 33.5752 38.1833 33.2367 38.1833H32.6948C32.3564 38.1833 32.0821 38.4576 32.0821 38.796C32.0821 39.1345 32.3564 39.4087 32.6948 39.4087H33.2367Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+							<path d="M24.3772 16.0504L24.3772 16.0504C25.0566 15.3193 26.0184 14.9 27.0165 14.9H29.2074C29.5458 14.9 29.8201 15.1743 29.8201 15.5127C29.8201 15.8511 29.5458 16.1254 29.2074 16.1254H27.0165C26.358 16.1254 25.723 16.4022 25.2748 16.8846L24.2977 17.9362H41.6356L40.6585 16.8846C40.2102 16.4022 39.5752 16.1254 38.9168 16.1254H31.1898C30.8513 16.1254 30.5771 15.8511 30.5771 15.5127C30.5771 15.1743 30.8513 14.9 31.1898 14.9H38.9168C39.9149 14.9 40.8767 15.3193 41.556 16.0504L43.0291 17.6358C43.2749 17.9003 43.3407 18.2852 43.1964 18.6164M24.3772 16.0504L43.1047 18.5765M24.3772 16.0504L22.9042 17.6357C22.6583 17.9003 22.5925 18.2852 22.7368 18.6164L22.7368 18.6164M24.3772 16.0504L22.7368 18.6164M43.1964 18.6164L43.1047 18.5765M43.1964 18.6164C43.1964 18.6164 43.1964 18.6164 43.1964 18.6164L43.1047 18.5765M43.1964 18.6164C43.1275 18.7746 43.0171 18.9059 42.8811 19.0001M43.1047 18.5765C43.0324 18.7426 42.9085 18.8755 42.7566 18.9599M42.8811 19.0001C42.8705 18.974 42.8598 18.9479 42.8491 18.9218L42.7566 18.9599M42.8811 19.0001C44.2085 22.2657 44.3935 25.6386 43.385 28.5723C43.2751 28.8923 42.9267 29.0625 42.6064 28.9525L42.6389 28.8579M42.8811 19.0001C42.8566 19.017 42.8313 19.0328 42.8052 19.0473L42.7566 18.9599M42.7566 18.9599L42.6389 28.8579M42.6389 28.8579C42.907 28.95 43.1984 28.8075 43.2905 28.5398L42.6389 28.8579ZM42.6389 28.8579C42.3712 28.7659 42.2287 28.4742 42.3208 28.2064C43.2761 25.4273 43.0495 22.1916 41.6865 19.0614M42.6389 28.8579L42.2446 29.7356C41.9978 29.5969 41.6852 29.6842 41.5463 29.931C41.4984 30.0163 41.4501 30.1016 41.3994 30.1859C41.0084 30.8378 40.4922 31.4179 39.8651 31.9103C38.826 32.726 38.0246 33.7935 37.5316 35.0141M42.6389 28.8579L42.6064 28.9525C42.2864 28.8425 42.1162 28.4939 42.2262 28.1739C43.166 25.44 42.9524 22.2539 41.6208 19.1614M42.6389 28.8579L42.5271 30.4829M41.6865 19.0614H24.2469M41.6865 19.0614L41.5948 19.1013C41.6035 19.1213 41.6122 19.1414 41.6208 19.1614M41.6865 19.0614V19.1614H41.6208M24.2469 19.0614C22.5375 22.9867 22.6378 27.0247 24.534 30.1859C24.9249 30.8378 25.4411 31.4179 26.0684 31.9103C27.1074 32.7259 27.9088 33.7934 28.4019 35.0141M24.2469 19.0614V19.1614H24.3126M24.2469 19.0614L24.3386 19.1013C24.3299 19.1214 24.3212 19.1414 24.3126 19.1614M28.4019 35.0141H37.5316M28.4019 35.0141L28.4946 34.9766C28.4862 34.9558 28.4777 34.9349 28.469 34.9141M28.4019 35.0141V34.9141H28.469M37.5316 35.0141V34.9141H37.4644M37.5316 35.0141L37.4388 34.9766C37.4473 34.9558 37.4558 34.9349 37.4644 34.9141M37.4644 34.9141C37.966 33.7034 38.7683 32.6442 39.8033 31.8316C40.4213 31.3465 40.9292 30.7754 41.3137 30.1345L41.3137 30.1344C41.3636 30.0514 41.4112 29.9673 41.4592 29.882C41.6251 29.587 41.9987 29.4827 42.2936 29.6485L42.2936 29.6485C42.5885 29.8144 42.693 30.1881 42.5271 30.4829M37.4644 34.9141H28.469M42.5271 30.4829C42.5271 30.4829 42.5271 30.4829 42.5271 30.4829L42.4399 30.4339L42.5271 30.4829ZM42.5271 30.4829C42.4744 30.5766 42.4208 30.6711 42.3645 30.7649L42.3645 30.765C41.9023 31.5355 41.2949 32.2186 40.5599 32.7956C39.0311 33.9958 38.1071 35.849 38.1071 37.8394V41.1102C38.1071 41.8223 37.6295 42.4229 36.9787 42.6132M42.5271 30.4829L40.4981 32.7169C38.9455 33.9359 38.0071 35.8179 38.0071 37.8394V41.1102C38.0071 41.8024 37.5247 42.3827 36.8787 42.5362M28.469 34.9141C27.9674 33.7033 27.1651 32.644 26.1302 31.8316C25.512 31.3464 25.0041 30.7754 24.6198 30.1345L24.6198 30.1345C22.7527 27.0219 22.6408 23.0437 24.3126 19.1614M24.3126 19.1614H41.6208M36.9787 42.6132V42.5362H36.8787M36.9787 42.6132V43.0952M36.9787 42.6132C36.9534 42.6206 36.9277 42.6274 36.9019 42.6335L36.8787 42.5362M36.8787 42.5362L36.9787 43.0952M36.9787 43.0952C36.9538 43.0857 36.928 43.0778 36.9016 43.0716L36.8787 43.169H36.9787V43.0952ZM36.9787 43.0952C37.2094 43.183 37.3738 43.4057 37.3738 43.6676C37.3738 43.9295 37.2095 44.1522 36.9787 44.2399M36.9787 43.0952L36.8787 45.1558M36.9787 44.2399V44.1662H36.8787L36.9016 44.2635C36.928 44.2573 36.9538 44.2494 36.9787 44.2399ZM36.9787 44.2399V45.0821M36.9787 45.0821C36.9538 45.0726 36.928 45.0647 36.9016 45.0585L36.8787 45.1558M36.9787 45.0821C37.2094 45.1698 37.3738 45.3925 37.3738 45.6544C37.3738 45.9217 37.2027 46.1484 36.9644 46.2322M36.9787 45.0821V45.1558H36.8787M36.8787 45.1558L36.9644 46.2322M36.9644 46.2322C36.967 46.2092 36.9692 46.1861 36.971 46.1629L36.8714 46.155L36.8928 46.2526C36.9172 46.2473 36.9412 46.2404 36.9644 46.2322ZM36.9644 46.2322C36.8651 47.1239 36.233 47.8564 35.3943 48.1031M36.9644 46.2322L35.2232 48.5502C35.0917 49.3903 34.3793 50 33.529 50H32.4045C31.5543 50 30.8418 49.3903 30.7103 48.5502L30.628 48.0241M35.3943 48.1031L35.4043 48.0395L35.3055 48.024L35.3308 48.1208C35.3521 48.1152 35.3733 48.1093 35.3943 48.1031ZM35.3943 48.1031L35.322 48.5657C35.1829 49.4544 34.4285 50.1 33.529 50.1H32.4045C31.505 50.1 30.7506 49.4544 30.6115 48.5657L30.5392 48.1032M30.5392 48.1032C30.5602 48.1094 30.5814 48.1153 30.6027 48.1208L30.628 48.0241M30.5392 48.1032C29.7005 47.8565 29.0684 47.124 28.9691 46.2323M30.5392 48.1032L30.5292 48.0395L30.628 48.0241M30.628 48.0241L28.9691 46.2323M28.9691 46.2323C28.9923 46.2405 29.0162 46.2473 29.0407 46.2527L29.0621 46.155L28.9624 46.163C28.9643 46.1862 28.9665 46.2093 28.9691 46.2323ZM28.9691 46.2323C28.7307 46.1485 28.5596 45.9218 28.5596 45.6545C28.5596 45.3926 28.7239 45.1698 28.9547 45.0821M28.9691 46.2323L29.0547 44.1663M28.9547 45.0821V45.1559H29.0547L29.0319 45.0585C29.0055 45.0647 28.9797 45.0726 28.9547 45.0821ZM28.9547 45.0821V44.2401M28.9547 44.2401C28.9797 44.2496 29.0055 44.2575 29.0319 44.2637L29.0547 44.1663M28.9547 44.2401C28.7239 44.1524 28.5596 43.9297 28.5596 43.6677C28.5596 43.4058 28.7239 43.183 28.9547 43.0954M28.9547 44.2401V44.1663H29.0547M29.0547 44.1663L28.9547 43.0954M28.9547 43.0954V43.1691H29.0547L29.0319 43.0718C29.0055 43.078 28.9797 43.0859 28.9547 43.0954ZM28.9547 43.0954V42.6133M28.9547 43.0954L29.0547 42.5364M28.9547 42.6133C28.9801 42.6207 29.0057 42.6275 29.0316 42.6337L29.0547 42.5364M28.9547 42.6133V42.5364H29.0547M28.9547 42.6133C28.3039 42.4231 27.8263 41.8224 27.8263 41.1103V39.7872C27.8263 39.4487 28.1006 39.1745 28.439 39.1745C28.7775 39.1745 29.0517 39.4487 29.0517 39.7872V41.1103C29.0517 41.2987 29.2051 41.4521 29.3934 41.4521H36.5399C36.7283 41.4521 36.8817 41.2987 36.8817 41.1103V37.8396C36.8817 37.2654 36.9459 36.6965 37.0733 36.1398M29.0547 42.5364C28.4088 42.3829 27.9263 41.8025 27.9263 41.1103V39.7872C27.9263 39.504 28.1558 39.2745 28.439 39.2745C28.7222 39.2745 28.9517 39.504 28.9517 39.7872V41.1103C28.9517 41.354 29.1499 41.5521 29.3934 41.5521H36.5399C36.7835 41.5521 36.9817 41.3539 36.9817 41.1103V37.8396C36.9817 37.2652 37.0468 36.6962 37.1759 36.1398H37.0733M37.0733 36.1398H28.8599L37.0969 36.0398C37.0888 36.073 37.0809 36.1064 37.0733 36.1398ZM22.7368 18.6164C22.8058 18.7747 22.9164 18.9062 23.0525 19.0003L22.7368 18.6164ZM30.18 45.0417V44.2803H35.7532V45.0417H30.18ZM35.7533 42.6774V43.055H30.1801V42.6774H35.7533ZM33.5289 48.8746H32.4044C32.1118 48.8746 31.8673 48.6654 31.8221 48.3763L31.7934 48.1925H34.14L34.1112 48.3763C34.066 48.6654 33.8215 48.8746 33.5289 48.8746ZM34.7726 46.9671H31.1607C30.7179 46.9671 30.3432 46.6716 30.2223 46.2672H35.7111C35.5901 46.6716 35.2154 46.9671 34.7726 46.9671Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+						</svg>',
+		  'Sports' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M46.5031 18.1215L46.4834 18.1126H46.4617H46.4189L34.7652 14.9036L34.7522 14.9H34.7387L34.7356 14.9C34.6529 14.9 34.5479 14.9 34.4487 14.9153C34.35 14.9304 34.2397 14.963 34.1607 15.042C34.0415 15.1612 33.906 15.3546 33.906 15.5636V15.6763V23.9614V44.1012C32.554 44.1951 31.3747 44.5185 30.5244 45.0174C29.655 45.5276 29.1153 46.2313 29.1153 47.0692C29.1153 47.9392 29.7302 48.6848 30.7039 49.2075C31.6799 49.7314 33.0357 50.0436 34.5696 50.0436C36.1035 50.0436 37.4593 49.7314 38.4353 49.2075C39.409 48.6848 40.0239 47.9392 40.0239 47.0692C40.0239 46.2589 39.4834 45.5554 38.6153 45.0389C37.7653 44.5331 36.586 44.1957 35.2332 44.1012V24.4888L46.4186 21.4688H46.4617H46.4834L46.5031 21.4598C47.1573 21.1624 47.5762 20.5641 47.5762 19.7907C47.5762 19.0172 47.1573 18.4189 46.5031 18.1215ZM46.1926 19.7343V19.7579L46.2032 19.779C46.2138 19.8002 46.2221 19.8667 46.1857 19.9578C46.1525 20.0408 46.0857 20.133 45.9708 20.2051L35.2332 23.0982V16.4268L45.9708 19.3198C46.192 19.46 46.1926 19.6837 46.1926 19.7343ZM38.6967 47.0692C38.6967 47.2438 38.6033 47.4345 38.4069 47.6276C38.2112 47.8199 37.9215 48.0059 37.5517 48.1683C36.8127 48.4929 35.77 48.7164 34.5696 48.7164C33.3692 48.7164 32.3265 48.4929 31.5875 48.1683C31.2177 48.0059 30.928 47.8199 30.7323 47.6276C30.5359 47.4345 30.4425 47.2438 30.4425 47.0692C30.4425 46.9215 30.5197 46.7547 30.6862 46.5799C30.8519 46.4059 31.0984 46.2325 31.4159 46.0737C32.0287 45.7673 32.892 45.5227 33.906 45.4309V47.0129C33.906 47.2047 33.9704 47.3723 34.0903 47.4922C34.2102 47.6121 34.3778 47.6765 34.5696 47.6765C34.7614 47.6765 34.929 47.6121 35.0489 47.4922C35.1688 47.3723 35.2332 47.2047 35.2332 47.0129V45.4309C36.2472 45.5227 37.1105 45.7673 37.7233 46.0737C38.0408 46.2325 38.2873 46.4059 38.453 46.5799C38.6195 46.7547 38.6967 46.9215 38.6967 47.0692Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+							<path d="M20.1681 46.8942L20.168 46.8943L20.1704 46.8981L21.9167 49.602C22.1032 49.9118 22.4165 50.1 22.7907 50.1H23.8615C24.2213 50.1 24.6031 49.9223 24.7396 49.5956L26.4817 46.8981L26.4818 46.8981L26.4841 46.8942C26.88 46.2155 26.9492 45.4249 26.6874 44.7346C27.9172 43.7556 28.6958 42.2266 28.6958 40.5314C28.6958 37.5454 26.2839 35.1335 23.2979 35.1335C20.3119 35.1335 17.9 37.5454 17.9 40.5314C17.9 42.2277 18.6798 43.7581 19.9657 44.7374C19.7034 45.4745 19.7708 46.2133 20.1681 46.8942ZM21.2974 46.1708C21.1692 45.9564 21.1108 45.7052 21.1242 45.4457C21.2177 45.4907 21.326 45.5348 21.438 45.5348C21.438 45.5348 21.4438 45.5354 21.4778 45.5524C21.4793 45.5532 21.4809 45.554 21.4825 45.5548C21.5038 45.5656 21.543 45.5854 21.5878 45.5901C22.0998 45.7596 22.6696 45.873 23.2415 45.873C23.8135 45.873 24.3833 45.7596 24.8953 45.5901C24.9401 45.5854 24.9793 45.5656 25.0006 45.5548C25.0022 45.554 25.0038 45.5532 25.0053 45.5524C25.0393 45.5354 25.0451 45.5348 25.0451 45.5348H25.0687L25.0898 45.5243C25.1302 45.5041 25.17 45.4928 25.2152 45.4801C25.2216 45.4783 25.228 45.4765 25.2346 45.4746C25.2703 45.4644 25.3194 45.4503 25.3627 45.4213C25.4035 45.4195 25.4389 45.4147 25.4693 45.4081C25.4899 45.6663 25.434 45.8973 25.2963 46.1741L23.6383 48.7165H22.9576L21.2974 46.1708ZM21.6459 44.2718L21.6273 44.264H21.6071H21.5738C21.5513 44.2532 21.5276 44.2427 21.5044 44.2323L21.4982 44.2295C21.4647 44.2145 21.4313 44.1995 21.3982 44.1829C21.3315 44.1496 21.2721 44.113 21.2269 44.0678L21.218 44.0589L21.2071 44.0524C19.9965 43.3371 19.2272 42.0729 19.2272 40.5878C19.2272 38.3322 21.0423 36.5171 23.2979 36.5171C25.5535 36.5171 27.3686 38.3322 27.3686 40.5878C27.3686 41.9591 26.6005 43.2787 25.3916 43.9944C25.3439 44.0186 25.2947 44.0524 25.2495 44.0835C25.2352 44.0933 25.2213 44.1028 25.208 44.1117C25.1501 44.1503 25.0913 44.1853 25.0236 44.2093C25.0224 44.2094 25.0211 44.2096 25.0198 44.2098C25.008 44.2118 24.9907 44.2159 24.9722 44.2252C24.9533 44.2346 24.9313 44.2504 24.9143 44.2759C24.9113 44.2805 24.9085 44.2852 24.906 44.29C23.8701 44.7121 22.6773 44.7061 21.6459 44.2718Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+							<path d="M23.3541 42.1786C23.1623 42.1786 22.9947 42.2429 22.8748 42.3628C22.7549 42.4828 22.6905 42.6504 22.6905 42.8422C22.6905 43.242 23.0237 43.5058 23.3541 43.5058C23.6846 43.5058 24.0177 43.242 24.0177 42.8422C24.0177 42.6504 23.9534 42.4828 23.8335 42.3628C23.7136 42.2429 23.5459 42.1786 23.3541 42.1786Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+							<path d="M23.5797 40.3186C23.3879 40.3186 23.2203 40.383 23.1004 40.5029C22.9805 40.6228 22.9161 40.7904 22.9161 40.9822C22.9161 41.382 23.2493 41.6459 23.5797 41.6459C23.9101 41.6459 24.2433 41.382 24.2433 40.9822C24.2433 40.7904 24.179 40.6228 24.059 40.5029C23.9391 40.383 23.7715 40.3186 23.5797 40.3186Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+							<path d="M25.4396 40.9386C25.2478 40.9386 25.0802 41.003 24.9603 41.1229C24.8403 41.2428 24.776 41.4104 24.776 41.6022C24.776 42.002 25.1092 42.2658 25.4396 42.2658C25.77 42.2658 26.1032 42.002 26.1032 41.6022C26.1032 41.4104 26.0388 41.2428 25.9189 41.1229C25.799 41.003 25.6314 40.9386 25.4396 40.9386Z" fill="#343434" stroke="#343434" stroke-width="0.2"/>
+						</svg>',
+		  'Toys' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M20.1523 32.4746H18.1016V34.5254H20.1523V32.4746Z" fill="#343434"/>
+							<path d="M32.5254 30.3555H30.4746V34.457H32.5254V30.3555Z" fill="#343434"/>
+							<path d="M44.8984 32.4746H42.8477V34.5254H44.8984V32.4746Z" fill="#343434"/>
+							<path d="M17.0762 28.373H26.373V22.1523H30.4746V20.1016H24.3223V18.0508H30.4746V16H32.5254V18.0508H38.6777V20.1016H32.5254V22.1523H36.627V28.373H45.9238C47.62 28.373 49 29.753 49 31.4492V35.5508C49 37.247 47.62 38.627 45.9238 38.627H36.4437L35.6711 42.5254L39.1904 46.8775V48.9492H32.5254V51H30.4746V48.9492H23.8096V46.8775L27.3289 42.5254L26.5563 38.627H17.0762C15.38 38.627 14 37.247 14 35.5508V31.4492C14 29.753 15.38 28.373 17.0762 28.373ZM29.2702 41.7715H33.7298L34.5762 37.5009V28.3047H28.4238V37.5009L29.2702 41.7715ZM28.4238 24.2031V26.2539H34.5762V24.2031H28.4238ZM46.9492 35.5508V31.4492C46.9492 30.8838 46.4892 30.4238 45.9238 30.4238H36.627V36.5762H45.9238C46.4892 36.5762 46.9492 36.1162 46.9492 35.5508ZM36.5699 46.8984L34.0824 43.8223H32.5254V46.8984H36.5699ZM26.4301 46.8984H30.4746V43.8223H28.9176L26.4301 46.8984ZM16.0508 35.5508C16.0508 36.1162 16.5108 36.5762 17.0762 36.5762H26.373V30.4238H17.0762C16.5108 30.4238 16.0508 30.8838 16.0508 31.4492V35.5508Z" fill="#343434"/>
+						</svg>',
+		  'Books' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M50.9746 19.0253C49.6076 17.6583 47.3831 17.6582 46.016 19.0253L45.1276 19.9138H38.0823C36.3949 19.9138 34.7164 20.6618 33.6127 21.8152C32.509 20.6618 30.8305 19.9138 29.1431 19.9138H18.0251C17.459 19.9138 17 20.3727 17 20.9389V45.818V49.8525C17 50.4166 17.4558 50.8747 18.0198 50.8776L30.0923 50.9392C30.7126 52.1355 31.9287 52.9299 33.3185 52.9877C33.3717 52.9903 33.4253 52.9916 33.4789 52.9916C33.5324 52.9916 33.586 52.9903 33.6393 52.9877C35.0278 52.93 36.2429 52.1371 36.8636 50.9428H49.1742C49.7403 50.9428 50.1993 50.4838 50.1993 49.9177V45.818V24.7592L50.9746 23.984C52.3418 22.6169 52.3418 20.3924 50.9746 19.0253ZM49.5249 20.475C50.0927 21.0428 50.0927 21.9665 49.5249 22.5343L48.4496 23.6096C48.4495 23.6097 48.4493 23.6098 48.4493 23.6099L48.3647 23.6945L46.3055 21.6352L47.4657 20.475C48.0334 19.9073 48.9572 19.9073 49.5249 20.475ZM32.8643 38.4294L30.7364 39.2636L31.5706 37.1357L32.8643 38.4294ZM34.6968 37.3625L32.6376 35.3033L44.8559 23.0849L46.9151 25.1442L34.6968 37.3625ZM19.0502 21.964H29.1431C30.6119 21.964 32.1635 22.868 32.6757 24.0223C32.8401 24.3928 33.2073 24.6316 33.6127 24.6316C34.018 24.6316 34.3853 24.3928 34.5497 24.0223C35.0619 22.868 36.6136 21.964 38.0823 21.964H43.0774L30.463 34.5784C30.4611 34.5803 30.4598 34.5822 30.458 34.5841C30.3621 34.6814 30.2848 34.798 30.2335 34.929L29.645 36.4303C29.4675 36.1247 29.1375 35.9187 28.7587 35.9187H22.134C21.5679 35.9187 21.1089 36.3777 21.1089 36.9438C21.1089 37.5099 21.5679 37.9689 22.134 37.9689H28.7587C28.8634 37.9689 28.9644 37.953 29.0595 37.9238L28.2382 40.0191H22.134C21.5679 40.0191 21.1089 40.4781 21.1089 41.0442C21.1089 41.6103 21.5679 42.0693 22.134 42.0693H28.6832C28.8876 42.1201 29.1007 42.1067 29.2997 42.0288L35.0709 39.7666C35.2034 39.7146 35.321 39.6364 35.4189 39.5391C35.4198 39.5382 35.4207 39.5379 35.4216 39.537L48.1492 26.8094V44.7929H36.96C35.3938 44.7929 34.2909 45.3668 33.6097 45.8922C32.9283 45.3668 31.8256 44.7929 30.2592 44.7929H19.0502V21.964ZM36.1707 48.8926C35.7095 48.8926 35.3051 49.2006 35.1825 49.6452C34.9776 50.3881 34.3225 50.9082 33.5522 50.9393C33.5493 50.9394 33.5464 50.9396 33.5434 50.9397C33.5007 50.9418 33.4573 50.9418 33.4146 50.9397C33.4117 50.9396 33.4087 50.9394 33.4058 50.9393C32.6355 50.9082 31.9804 50.3881 31.7755 49.6452C31.6534 49.2024 31.2517 48.8949 30.7925 48.8926L19.0502 48.8326V46.8431H30.2592C31.8266 46.8431 32.6061 47.7034 32.7519 47.8833C32.9404 48.1709 33.2647 48.3472 33.6127 48.3472C33.97 48.3472 34.2996 48.1613 34.4853 47.86C34.6514 47.6616 35.4303 46.8431 36.96 46.8431H48.1492V48.8926H36.1707Z" fill="#343434"/>
+							<path d="M22.134 29.7681H28.7587C29.3248 29.7681 29.7838 29.3092 29.7838 28.743C29.7838 28.1769 29.3248 27.7179 28.7587 27.7179H22.134C21.5679 27.7179 21.1089 28.1769 21.1089 28.743C21.1089 29.3092 21.5678 29.7681 22.134 29.7681Z" fill="#343434"/>
+							<path d="M22.134 33.8685H28.7587C29.3248 33.8685 29.7838 33.4096 29.7838 32.8434C29.7838 32.2773 29.3248 31.8183 28.7587 31.8183H22.134C21.5679 31.8183 21.1089 32.2773 21.1089 32.8434C21.1089 33.4096 21.5678 33.8685 22.134 33.8685Z" fill="#343434"/>
+						</svg>',
+		  'Food' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M33.5682 34.6223C33.5224 34.5431 33.4566 34.4773 33.3773 34.4316C33.298 34.3858 33.2081 34.3618 33.1166 34.3618C33.0251 34.3618 32.9352 34.3858 32.8559 34.4316C32.7767 34.4773 32.7108 34.5431 32.665 34.6223L25.3672 47.2646C25.2981 47.3843 25.2794 47.5266 25.3151 47.6601C25.3509 47.7936 25.4382 47.9074 25.5578 47.9765C27.8568 49.3022 30.464 50 33.1178 50C35.7716 50 38.3788 49.3022 40.6778 47.9765C40.7371 47.9423 40.789 47.8967 40.8306 47.8424C40.8723 47.7881 40.9028 47.7261 40.9205 47.66C40.9381 47.5939 40.9426 47.525 40.9336 47.4571C40.9247 47.3893 40.9024 47.3239 40.8682 47.2646L33.5682 34.6223ZM33.1166 35.9255L38.3544 44.9981C36.7362 45.8381 34.9397 46.2766 33.1165 46.2766C31.2932 46.2766 29.4967 45.8381 27.8785 44.9981L33.1166 35.9255ZM33.1166 48.9574C30.8222 48.9583 28.5623 48.3985 26.5336 47.3266L27.357 45.9007C29.1336 46.8324 31.1099 47.3191 33.116 47.3191C35.1222 47.3191 37.0984 46.8324 38.8751 45.9007L39.6984 47.3266C37.6701 48.3983 35.4106 48.9581 33.1166 48.9574Z" fill="black"/>
+							<path d="M33.1168 15C29.7891 15.0004 26.5545 16.0988 23.9145 18.1247C21.2745 20.1506 19.3767 22.991 18.5153 26.2053C17.6539 29.4196 17.8771 32.8283 19.1502 35.9029C20.4233 38.9775 22.6753 41.5462 25.5568 43.2106C25.6766 43.2798 25.819 43.2986 25.9526 43.2628C26.0862 43.2271 26.2001 43.1397 26.2694 43.02L33.1168 31.1596L39.9643 43.02C40.0335 43.1397 40.1475 43.2271 40.2811 43.2628C40.4147 43.2986 40.5571 43.2798 40.6768 43.2106C43.5584 41.5462 45.8104 38.9775 47.0835 35.9029C48.3566 32.8283 48.5798 29.4196 47.7184 26.2053C46.857 22.991 44.9592 20.1506 42.3192 18.1247C39.6792 16.0988 36.4446 15.0004 33.1168 15ZM34.0197 29.5957L39.256 20.5255C40.7915 21.5078 42.069 22.844 42.9812 24.4221C43.8934 26.0002 44.4138 27.7741 44.4985 29.5949L34.0197 29.5957ZM44.4929 30.6383C44.4056 32.4579 43.885 34.2303 42.9742 35.808C42.0635 37.3857 40.789 38.723 39.2569 39.7085L34.0197 30.6383H44.4929ZM33.1168 29.0745L27.8796 20.0034C29.4973 19.1623 31.2937 18.7233 33.1168 18.7233C34.94 18.7233 36.7364 19.1623 38.354 20.0034L33.1168 29.0745ZM26.9777 20.5255L32.214 29.5957H21.7363C21.8209 27.7749 22.341 26.0009 23.253 24.4227C24.165 22.8444 25.4423 21.508 26.9777 20.5255ZM32.214 30.6383L26.9765 39.7085C25.4445 38.7229 24.1701 37.3856 23.2594 35.8079C22.3487 34.2303 21.8281 32.4579 21.7408 30.6383H32.214ZM40.6015 42.0385L39.7782 40.6126C42.0525 39.1699 43.797 37.0279 44.7495 34.5087C45.7019 31.9894 45.8107 29.229 45.0596 26.6426C44.3085 24.0562 42.738 21.7835 40.5843 20.1663C38.4306 18.5491 35.8101 17.6747 33.1168 17.6747C30.4236 17.6747 27.8031 18.5491 25.6494 20.1663C23.4957 21.7835 21.9252 24.0562 21.1741 26.6426C20.423 29.229 20.5318 31.9894 21.4842 34.5087C22.4367 37.0279 24.1812 39.1699 26.4555 40.6126L25.6322 42.0385C23.0462 40.4146 21.0585 37.9938 19.9689 35.1412C18.8793 32.2887 18.747 29.1591 19.5919 26.2248C20.4368 23.2904 22.2131 20.7104 24.6528 18.8741C27.0925 17.0377 30.0633 16.0447 33.1168 16.0447C36.1704 16.0447 39.1412 17.0377 41.5809 18.8741C44.0206 20.7104 45.7969 23.2904 46.6418 26.2248C47.4867 29.1591 47.3544 32.2887 46.2648 35.1412C45.1752 37.9938 43.1875 40.4146 40.6015 42.0385Z" fill="black"/>
+							<path d="M33.1171 43.9419C33.4558 43.9419 33.787 43.8414 34.0686 43.6532C34.3503 43.465 34.5698 43.1975 34.6995 42.8845C34.8291 42.5716 34.863 42.2272 34.7969 41.8949C34.7308 41.5627 34.5677 41.2575 34.3282 41.018C34.0886 40.7785 33.7835 40.6153 33.4512 40.5492C33.119 40.4832 32.7746 40.5171 32.4616 40.6467C32.1486 40.7763 31.8812 40.9959 31.693 41.2775C31.5047 41.5592 31.4043 41.8903 31.4043 42.2291C31.4048 42.6832 31.5854 43.1186 31.9065 43.4397C32.2276 43.7608 32.663 43.9414 33.1171 43.9419ZM33.1171 41.5589C33.2496 41.5589 33.3792 41.5982 33.4894 41.6718C33.5996 41.7455 33.6855 41.8501 33.7363 41.9726C33.787 42.0951 33.8003 42.2298 33.7744 42.3598C33.7485 42.4899 33.6847 42.6093 33.591 42.703C33.4972 42.7967 33.3778 42.8606 33.2478 42.8864C33.1178 42.9123 32.983 42.899 32.8606 42.8483C32.7381 42.7976 32.6334 42.7117 32.5598 42.6014C32.4862 42.4912 32.4469 42.3617 32.4469 42.2291C32.4471 42.0514 32.5178 41.8811 32.6434 41.7554C32.7691 41.6298 32.9394 41.5591 33.1171 41.5589Z" fill="black"/>
+							<path d="M31.4043 22.7709C31.4043 23.1097 31.5047 23.4408 31.693 23.7225C31.8812 24.0041 32.1486 24.2237 32.4616 24.3533C32.7746 24.4829 33.119 24.5168 33.4512 24.4508C33.7835 24.3847 34.0886 24.2215 34.3282 23.982C34.5677 23.7425 34.7308 23.4373 34.7969 23.105C34.863 22.7728 34.8291 22.4284 34.6995 22.1155C34.5698 21.8025 34.3503 21.535 34.0686 21.3468C33.787 21.1586 33.4558 21.0581 33.1171 21.0581C32.663 21.0587 32.2276 21.2393 31.9066 21.5604C31.5855 21.8815 31.4048 22.3168 31.4043 22.7709ZM33.7873 22.7709C33.7873 22.9035 33.748 23.033 33.6743 23.1433C33.6007 23.2535 33.496 23.3394 33.3735 23.3901C33.2511 23.4408 33.1163 23.4541 32.9863 23.4282C32.8563 23.4024 32.7369 23.3385 32.6432 23.2448C32.5494 23.1511 32.4856 23.0317 32.4597 22.9017C32.4339 22.7716 32.4471 22.6369 32.4979 22.5144C32.5486 22.392 32.6345 22.2873 32.7447 22.2136C32.8549 22.14 32.9845 22.1007 33.1171 22.1007C33.2947 22.1009 33.4651 22.1716 33.5907 22.2973C33.7164 22.4229 33.787 22.5932 33.7873 22.7709Z" fill="black"/>
+							<path d="M25.8986 27.9273C26.192 28.0967 26.529 28.1752 26.867 28.1531C27.205 28.1309 27.5289 28.009 27.7976 27.8027C28.0663 27.5965 28.2679 27.3152 28.3768 26.9944C28.4856 26.6737 28.4969 26.3278 28.4093 26.0006C28.3216 25.6734 28.1388 25.3796 27.8842 25.1562C27.6295 24.9329 27.3143 24.7901 26.9784 24.7459C26.6426 24.7016 26.3012 24.758 25.9973 24.9078C25.6935 25.0576 25.441 25.2942 25.2716 25.5876C25.0451 25.9811 24.9839 26.4484 25.1014 26.8871C25.219 27.3257 25.5057 27.6998 25.8986 27.9273ZM26.1744 26.1088C26.2407 25.994 26.3395 25.9015 26.4584 25.8429C26.5773 25.7843 26.7109 25.7622 26.8423 25.7795C26.9737 25.7968 27.0971 25.8527 27.1967 25.9401C27.2964 26.0274 27.3679 26.1424 27.4022 26.2704C27.4365 26.3985 27.4321 26.5338 27.3895 26.6593C27.3469 26.7848 27.2681 26.8949 27.1629 26.9756C27.0578 27.0563 26.9311 27.104 26.7988 27.1127C26.6666 27.1214 26.5347 27.0907 26.4199 27.0245C26.3436 26.9806 26.2767 26.922 26.223 26.8522C26.1694 26.7823 26.13 26.7026 26.1072 26.6176C26.0844 26.5325 26.0786 26.4438 26.0902 26.3565C26.1017 26.2692 26.1303 26.185 26.1744 26.1088Z" fill="black"/>
+							<path d="M40.9622 34.6465C41.1317 34.3532 41.2105 34.0162 41.1885 33.6782C41.1666 33.3402 41.0449 33.0162 40.8388 32.7473C40.6327 32.4785 40.3516 32.2767 40.0309 32.1677C39.7102 32.0586 39.3643 32.0471 39.0371 32.1345C38.7098 32.222 38.4158 32.4046 38.1923 32.6591C37.9688 32.9137 37.8258 33.2288 37.7814 33.5646C37.737 33.9005 37.7931 34.2419 37.9428 34.5458C38.0924 34.8497 38.3288 35.1024 38.6221 35.272C38.8168 35.3847 39.0318 35.4579 39.2548 35.4875C39.4778 35.517 39.7044 35.5023 39.9218 35.4442C40.1391 35.3861 40.3429 35.2858 40.5214 35.1489C40.6999 35.012 40.8497 34.8413 40.9622 34.6465ZM38.8982 33.455C38.9645 33.3402 39.0633 33.2476 39.1822 33.1889C39.3011 33.1303 39.4347 33.1082 39.5662 33.1255C39.6976 33.1429 39.8209 33.1987 39.9206 33.2862C40.0203 33.3736 40.0918 33.4886 40.1261 33.6166C40.1604 33.7447 40.1559 33.88 40.1133 34.0056C40.0706 34.1311 39.9917 34.2412 39.8865 34.3218C39.7813 34.4025 39.6546 34.4502 39.5223 34.4588C39.39 34.4674 39.2581 34.4367 39.1434 34.3703C38.9896 34.2813 38.8775 34.1349 38.8315 33.9633C38.7855 33.7917 38.8095 33.6089 38.8982 33.455Z" fill="black"/>
+							<path d="M27.6113 35.2732C27.9046 35.1037 28.1411 34.851 28.2908 34.5471C28.4405 34.2432 28.4967 33.9017 28.4523 33.5659C28.4079 33.23 28.2649 32.9149 28.0414 32.6603C27.8179 32.4057 27.5239 32.2231 27.1966 32.1356C26.8694 32.0481 26.5235 32.0597 26.2028 32.1687C25.882 32.2778 25.6009 32.4796 25.3948 32.7485C25.1887 33.0173 25.067 33.3413 25.0451 33.6794C25.0232 34.0174 25.102 34.3544 25.2715 34.6477C25.384 34.8424 25.5338 35.0131 25.7123 35.15C25.8908 35.2869 26.0945 35.3872 26.3118 35.4453C26.5291 35.5034 26.7557 35.5181 26.9787 35.4886C27.2017 35.459 27.4167 35.3858 27.6113 35.2732ZM26.4198 33.2095C26.5346 33.1433 26.6665 33.1126 26.7988 33.1213C26.931 33.13 27.0577 33.1777 27.1629 33.2584C27.268 33.3391 27.3469 33.4492 27.3895 33.5747C27.4321 33.7002 27.4365 33.8355 27.4022 33.9636C27.3678 34.0916 27.2963 34.2066 27.1967 34.294C27.097 34.3813 26.9737 34.4372 26.8423 34.4545C26.7109 34.4718 26.5773 34.4498 26.4584 34.3911C26.3395 34.3325 26.2407 34.24 26.1744 34.1252C26.0857 33.9712 26.0618 33.7883 26.1078 33.6166C26.1538 33.4449 26.266 33.2986 26.4198 33.2095Z" fill="black"/>
+							<path d="M38.6221 24.9608C38.3288 25.1304 38.0924 25.3831 37.9428 25.687C37.7931 25.9909 37.737 26.3324 37.7814 26.6682C37.8258 27.004 37.9688 27.3191 38.1923 27.5737C38.4158 27.8283 38.7098 28.0108 39.0371 28.0983C39.3643 28.1858 39.7102 28.1742 40.0309 28.0652C40.3516 27.9561 40.6327 27.7544 40.8388 27.4855C41.0449 27.2166 41.1666 26.8927 41.1885 26.5546C41.2105 26.2166 41.1317 25.8796 40.9622 25.5864C40.8497 25.3916 40.6999 25.2208 40.5214 25.0839C40.3429 24.9471 40.1391 24.8467 39.9218 24.7886C39.7044 24.7305 39.4778 24.7158 39.2548 24.7454C39.0318 24.7749 38.8168 24.8481 38.6221 24.9608ZM39.8136 27.0245C39.6987 27.0907 39.5669 27.1214 39.4346 27.1126C39.3024 27.1039 39.1757 27.0561 39.0706 26.9754C38.9655 26.8946 38.8866 26.7845 38.8441 26.659C38.8016 26.5335 38.7972 26.3982 38.8315 26.2701C38.8659 26.1421 38.9374 26.0272 39.0371 25.9398C39.1368 25.8525 39.2601 25.7966 39.3915 25.7794C39.523 25.7621 39.6565 25.7842 39.7754 25.8428C39.8943 25.9015 39.9931 25.9941 40.0593 26.1088C40.148 26.2629 40.172 26.4458 40.1259 26.6175C40.0798 26.7892 39.9675 26.9356 39.8136 27.0245Z" fill="black"/>
+						</svg>',
+		  'Automotive' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M38.0451 33.5076L36.6775 34.6787C36.5475 34.7901 36.4727 34.9526 36.4727 35.1237V36.5022C36.4727 36.8258 36.735 37.0881 37.0586 37.0881C37.3822 37.0881 37.6445 36.8258 37.6445 36.5022V35.3934L38.8073 34.3977C39.0531 34.1873 39.0818 33.8173 38.8712 33.5716C38.6609 33.3258 38.2909 33.2972 38.0451 33.5076Z" fill="#343434"/>
+							<path d="M50.7949 34.1047C50.8116 34.0293 50.8228 33.9521 50.8266 33.8733C50.8502 33.3758 50.6014 32.9059 50.1772 32.6472V32.6473C49.0662 31.9694 47.9299 31.6511 46.9335 31.5199L47.5282 31.0416C48.0544 30.6184 48.3112 29.9434 48.1983 29.2801C47.9827 28.0128 47.3342 25.6594 45.4134 24.136C42.9173 22.1563 41.1786 21.1243 41.1059 21.0814C40.9654 20.9984 40.7967 20.9778 40.6405 21.0245C40.5411 21.0542 39.6549 21.3409 39.1636 22.2566C38.8004 22.9335 38.7602 23.7489 39.044 24.6799C39.084 24.8111 39.1325 24.9328 39.1876 25.0467C39.1808 25.0467 39.1742 25.0462 39.1675 25.0462C38.5119 25.0462 37.9287 25.3616 37.5612 25.8485C35.8508 25.3261 33.8445 24.9003 32.0638 24.9114C29.4883 24.929 28.1838 26.3612 27.6536 27.165C26.9467 26.8508 25.5872 26.2806 24.211 25.8902C23.2495 25.6176 22.4605 25.7958 21.8654 26.0985C21.6549 25.4404 21.1168 24.8963 20.4024 24.7034C19.7208 24.5193 18.9619 24.314 18.3467 24.1471C17.3669 23.8814 16.2965 24.1301 15.5305 24.8481C15.3295 25.0365 15.1197 25.2361 14.9201 25.4274C14.1288 26.1855 14.2944 27.4906 15.2506 28.027L26.8555 34.5397C26.697 35.0512 26.7106 35.4265 26.7106 35.7076L25.1963 36.0986C24.1164 33.9087 21.9068 32.52 19.4322 32.52C15.8854 32.5201 13 35.4054 13 38.9521C13 42.4987 15.8854 45.384 19.4319 45.384C22.0963 45.384 24.4965 43.7077 25.439 41.2496L26.4832 41.4088L26.2748 41.7143C25.8186 42.3837 26.2989 43.2921 27.1087 43.2921H38.4392C39.2866 43.2921 40.032 42.7816 40.3392 41.9934L40.5967 41.3327C41.5499 43.7117 43.8836 45.3839 46.5681 45.3839C50.1146 45.3839 53 42.4985 53 38.9521C53 37.0693 52.2016 35.3276 50.7949 34.1047ZM49.5669 33.6476C49.6491 33.6977 49.658 33.7757 49.656 33.8177C49.6524 33.8961 49.6052 33.9565 49.5463 33.9852L45.755 35.8296C45.5839 35.9127 45.3871 35.9371 45.2008 35.8976C42.7278 35.375 43.4055 35.5183 42.91 35.4135C43.2102 34.7257 43.6713 34.1429 44.2072 33.7119L45.5732 32.6136C46.6354 32.5962 48.1318 32.7722 49.5669 33.6476ZM46.5371 38.801C46.305 38.945 46.0003 38.8739 45.8562 38.6414L44.8512 37.0215C45.0054 37.0541 45.4456 37.1665 45.9966 36.9916L46.6967 38.12C46.8403 38.3518 46.7688 38.6572 46.5371 38.801ZM39.1675 26.2181C39.6297 26.2181 40.0072 26.5974 40.0072 27.0578C40.0072 27.5191 39.6325 27.8976 39.1675 27.8976C38.7016 27.8976 38.3277 27.5157 38.3277 27.0578C38.3277 26.6062 38.6958 26.2181 39.1675 26.2181ZM38.1096 28.7681C38.5281 29.0281 39.0351 29.1249 39.5221 29.0379C39.8104 29.2017 40.2071 29.5595 40.4631 29.7711C39.7959 29.8631 39.1098 29.9265 38.4853 29.9577C37.5176 30.0059 36.5977 30.3142 35.8153 30.8068L30.6562 34.0542C30.1065 34.4002 29.9261 35.1279 30.2545 35.677C30.255 35.6779 30.259 35.6846 30.2595 35.6854C30.4451 35.9909 30.6151 36.3326 30.7307 36.6741C31.0889 37.733 30.8636 38.5089 29.8342 39.0465L28.4262 37.7586C28.0805 37.4424 27.8822 36.9922 27.8822 36.5237C27.8822 36.1394 27.8822 35.8827 27.8822 35.4944C27.8822 34.8921 28.1465 34.3536 28.5577 33.983C28.7458 33.8134 28.2168 34.1612 35.5484 29.5462C36.0139 29.2534 36.5451 28.9858 38.1096 28.7681ZM32.0717 26.0834C33.893 26.0679 35.89 26.5667 37.1587 26.9509C37.1587 27.0368 37.1335 27.3414 37.27 27.7274C36.7505 27.8224 35.9134 27.9319 34.9243 28.5545L30.1707 31.5466L28.549 27.9398C28.859 27.4184 29.8615 26.0984 32.0717 26.0834ZM23.8912 27.0178C25.395 27.4443 26.926 28.1196 27.4534 28.3607L28.7189 31.1754C24.9467 29.3522 22.9491 28.3497 22.7407 28.2363C22.7379 28.2348 22.7354 28.2333 22.7326 28.2318C22.4134 28.0571 22.0476 27.7941 21.9431 27.4438C22.3808 27.0781 23.0329 26.7743 23.8912 27.0178ZM15.8239 27.0052C15.5551 26.8544 15.5076 26.4872 15.7306 26.2735C15.9272 26.0852 16.1337 25.8888 16.3317 25.7032C16.6587 25.3967 17.0967 25.2154 17.5661 25.2154C17.7259 25.2154 17.8858 25.2364 18.0397 25.2781C18.6551 25.4453 19.4145 25.6506 20.0965 25.8348C20.5626 25.9607 20.8613 26.4145 20.7765 26.8681C20.6057 27.7821 21.0586 28.5291 21.8345 29.0552L20.5153 29.638L15.8239 27.0052ZM21.7927 30.3548L23.1488 29.7558C23.1568 29.7598 23.165 29.7639 23.1731 29.7679L23.175 29.7688C24.8725 30.6158 27.194 31.7412 28.7042 32.4698C28.1919 32.7923 27.8004 33.004 27.4032 33.5034L21.7927 30.3548ZM19.4319 44.2121C16.5315 44.2121 14.1719 41.8525 14.1719 38.9521C14.1719 36.0517 16.5315 33.692 19.4319 33.692C21.3719 33.692 23.1129 34.7353 24.0318 36.3995L22.6043 36.7682C21.8894 35.7283 20.712 35.0993 19.432 35.0993C17.3076 35.0993 15.5792 36.8276 15.5792 38.9521C15.5792 41.0765 17.3076 42.8049 19.432 42.8049C20.837 42.8049 22.1086 42.0492 22.7868 40.8455L24.2471 41.068C23.4175 42.9482 21.5243 44.2121 19.4319 44.2121ZM20.1489 40.4435L21.5057 40.6502C21.005 41.2632 20.2511 41.633 19.4319 41.633C17.9537 41.633 16.751 40.4303 16.751 38.9521C16.751 37.4739 17.9537 36.2711 19.4319 36.2711C20.1708 36.2711 20.86 36.5736 21.3579 37.09L19.9964 37.4417C19.319 37.6166 18.8459 38.2275 18.8459 38.927C18.846 39.6907 19.394 40.3284 20.1489 40.4435ZM27.2153 40.3349L20.3254 39.285C20.1472 39.2579 20.0179 39.1073 20.0179 38.927C20.0179 38.7618 20.1296 38.6176 20.2895 38.5764C21.0737 38.3738 26.0861 37.0792 26.7371 36.9111C26.8244 37.5439 27.1336 38.1647 27.6353 38.6235L28.5756 39.4836C28.1259 39.586 27.672 39.665 27.2153 40.3349ZM40.3575 38.7193H36.4242C36.1006 38.7193 35.8383 38.9816 35.8383 39.3053C35.8383 39.6289 36.1006 39.8912 36.4242 39.8912H39.9008L39.2473 41.5678C39.1164 41.9038 38.7989 42.1201 38.4393 42.1201H27.4164C28.2666 40.8732 27.8122 41.5396 28.2294 40.9277C28.3207 40.7938 28.4631 40.7054 28.6166 40.6744C29.3295 40.5298 30.1036 40.2853 30.7116 39.8912H33.6898C34.0134 39.8912 34.2758 39.6289 34.2758 39.3053C34.2758 38.9816 34.0134 38.7193 33.6898 38.7193H31.7931C32.3674 37.5423 31.9384 36.192 31.2607 35.0776C31.2603 35.0736 31.264 35.0563 31.2805 35.046L36.4395 31.7987C37.0778 31.3968 37.8054 31.165 38.5436 31.1281C40.8494 31.0131 42.7698 30.5761 43.9748 30.2296C44.8796 29.9695 45.5232 28.9436 44.9999 27.8293C44.3235 26.3881 42.9425 25.9706 41.8223 25.5697C40.9243 25.2461 40.3604 24.9789 40.165 24.3382C39.7572 23.0006 40.379 22.4468 40.7572 22.2424C41.3176 22.5931 42.7853 23.5473 44.6853 25.0542C46.3001 26.3349 46.8556 28.3747 47.0431 29.4766C47.0847 29.7216 46.9892 29.9713 46.7939 30.1284L44.9923 31.5771L44.9921 31.5773L43.4729 32.7988C42.7032 33.4176 42.1068 34.2312 41.7482 35.1514C41.4651 35.8772 40.6447 37.9825 40.3575 38.7193ZM41.1163 26.5584C42.2593 26.9981 43.4846 27.2397 43.9793 28.4177C44.0971 28.6986 43.9443 29.019 43.6509 29.1033C43.1381 29.2507 42.574 29.3896 41.9864 29.5099L40.6579 28.4116C41.1231 27.9002 41.2796 27.1951 41.1163 26.5584ZM46.5681 44.2121C43.8574 44.2121 41.582 42.1283 41.3325 39.4447L42.4728 36.519L43.427 36.7206C42.9671 37.364 42.7153 38.1375 42.7153 38.9521C42.7153 41.0765 44.4436 42.8049 46.5681 42.8049C48.2576 42.8049 49.7345 41.7215 50.2431 40.1089C50.3405 39.8004 50.1692 39.4712 49.8606 39.3739C49.5518 39.2766 49.2228 39.4479 49.1255 39.7564C48.7715 40.8789 47.7438 41.633 46.5681 41.633C45.0898 41.633 43.8871 40.4303 43.8871 38.9521C43.8871 38.6145 43.9504 38.2874 44.0686 37.983L44.8604 39.2593C45.3472 40.0439 46.3743 40.2812 47.1549 39.7968C47.9356 39.3125 48.1768 38.2832 47.6924 37.5023V37.5022L47.0672 36.4944L47.3092 36.3767C47.93 36.5565 48.4769 36.9629 48.829 37.514C49.0032 37.7867 49.3655 37.8663 49.6382 37.6922C49.9109 37.518 49.9907 37.1557 49.8164 36.883C49.5171 36.4147 49.1195 36.0186 48.6593 35.7199L50.059 35.039C50.0642 35.0364 50.0695 35.0339 50.0746 35.0311C51.1942 36.029 51.8281 37.4349 51.8281 38.9521C51.8281 41.8525 49.4685 44.2121 46.5681 44.2121Z" fill="#343434"/>
+						</svg>',
+		  'Health' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M44.3935 19.1182H41.277C40.8022 18.2985 39.916 17.7454 38.9024 17.7454H35.8109C35.8109 16.2853 34.6414 15.0847 33.2269 15.0044C31.6294 14.916 30.3254 16.1835 30.3254 17.7454H27.2338C26.2203 17.7454 25.3341 18.2985 24.8592 19.1182H21.7427C20.2304 19.1182 19 20.3486 19 21.861V47.2573C19 48.7696 20.2304 50 21.7427 50H44.3935C45.9058 50 47.1362 48.7696 47.1362 47.2573V21.861C47.1362 20.3486 45.9058 19.1182 44.3935 19.1182ZM43.0235 23.231V45.8873H23.1127V23.231H43.0235ZM27.2338 19.1126H31.1266C31.5965 19.1126 31.9286 18.6472 31.7711 18.2013C31.4419 17.2697 32.17 16.3126 33.1495 16.3694C34.0402 16.4199 34.6735 17.3295 34.365 18.2012C34.2082 18.6452 34.5376 19.1126 35.0096 19.1126H38.9023C39.6609 19.1126 40.2779 19.7297 40.2779 20.4882V21.8638H25.8582V20.4882C25.8582 19.7297 26.4754 19.1126 27.2338 19.1126ZM45.7691 47.2572C45.7691 48.0157 45.152 48.6327 44.3935 48.6327H21.7427C20.9842 48.6327 20.3672 48.0157 20.3672 47.2572V21.861C20.3672 21.1024 20.9842 20.4854 21.7427 20.4854H24.4911C24.4911 20.496 24.491 21.8537 24.491 21.8638H22.4291C22.0516 21.8638 21.7455 22.1699 21.7455 22.5474V46.5709C21.7455 46.9484 22.0516 47.2545 22.4291 47.2545H43.7071C44.0847 47.2545 44.3907 46.9484 44.3907 46.5709V22.5474C44.3907 22.1699 44.0847 21.8638 43.7071 21.8638H41.6452C41.6452 21.8537 41.6451 20.496 41.6451 20.4854H44.3935C45.152 20.4854 45.7691 21.1024 45.7691 21.861V47.2572Z" fill="#343434"/>
+							<path d="M28.9497 31.4676H31.0116V33.5295C31.0116 33.907 31.3177 34.2131 31.6952 34.2131H34.4408C34.8183 34.2131 35.1244 33.907 35.1244 33.5295V31.4676H37.1863C37.5639 31.4676 37.8699 31.1615 37.8699 30.784V28.0384C37.8699 27.6608 37.5639 27.3548 37.1863 27.3548H35.1244V25.2929C35.1244 24.9153 34.8183 24.6093 34.4408 24.6093H31.6952C31.3177 24.6093 31.0116 24.9153 31.0116 25.2929V27.3548H28.9497C28.5722 27.3548 28.2661 27.6608 28.2661 28.0384V30.784C28.2661 31.1615 28.5722 31.4676 28.9497 31.4676ZM29.6333 28.722H31.6952C32.0727 28.722 32.3788 28.4159 32.3788 28.0384V25.9765H33.7572V28.0384C33.7572 28.4159 34.0633 28.722 34.4408 28.722H36.5027V30.1004H34.4408C34.0633 30.1004 33.7572 30.4065 33.7572 30.784V32.8459H32.3788V30.784C32.3788 30.4065 32.0727 30.1004 31.6952 30.1004H29.6333V28.722Z" fill="#343434"/>
+							<path d="M25.8608 37.645H27.92C28.2976 37.645 28.6036 37.3389 28.6036 36.9614C28.6036 36.584 28.2976 36.2778 27.92 36.2778H25.8608C25.4834 36.2778 25.1772 36.584 25.1772 36.9614C25.1772 37.3389 25.4834 37.645 25.8608 37.645Z" fill="#343434"/>
+							<path d="M29.9824 36.9614C29.9824 37.3389 30.2885 37.645 30.666 37.645H40.2753C40.6529 37.645 40.9589 37.3389 40.9589 36.9614C40.9589 36.584 40.6529 36.2778 40.2753 36.2778H30.666C30.2885 36.2778 29.9824 36.584 29.9824 36.9614Z" fill="#343434"/>
+							<path d="M25.8608 41.077H27.92C28.2976 41.077 28.6036 40.7709 28.6036 40.3934C28.6036 40.0159 28.2976 39.7098 27.92 39.7098H25.8608C25.4834 39.7098 25.1772 40.0159 25.1772 40.3934C25.1772 40.7709 25.4834 41.077 25.8608 41.077Z" fill="#343434"/>
+							<path d="M40.2753 39.7098H30.666C30.2885 39.7098 29.9824 40.0159 29.9824 40.3934C29.9824 40.7709 30.2885 41.077 30.666 41.077H40.2753C40.6529 41.077 40.9589 40.7709 40.9589 40.3934C40.9589 40.0159 40.6528 39.7098 40.2753 39.7098Z" fill="#343434"/>
+							<path d="M25.8608 44.5089H27.92C28.2976 44.5089 28.6036 44.2028 28.6036 43.8253C28.6036 43.4478 28.2976 43.1417 27.92 43.1417H25.8608C25.4834 43.1417 25.1772 43.4478 25.1772 43.8253C25.1772 44.2028 25.4834 44.5089 25.8608 44.5089Z" fill="#343434"/>
+							<path d="M40.2753 43.1417H30.666C30.2885 43.1417 29.9824 43.4478 29.9824 43.8253C29.9824 44.2028 30.2885 44.5089 30.666 44.5089H40.2753C40.6529 44.5089 40.9589 44.2028 40.9589 43.8253C40.9589 43.4478 40.6528 43.1417 40.2753 43.1417Z" fill="#343434"/>
+						</svg>',
+		  'Beauty' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
+							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
+							<path d="M50.9746 26.1933H48.6504V18.4687C48.6504 17.9024 48.1913 17.4433 47.625 17.4433H42.1563C41.59 17.4433 41.1309 17.9024 41.1309 18.4687V26.1933H38.2598V21.9676L40.3589 17.2445C40.4851 16.9607 40.4757 16.6348 40.3335 16.3587C38.0263 11.8781 30.9713 11.8828 28.6665 16.3587C28.5242 16.6349 28.5149 16.9607 28.6411 17.2445L30.7402 21.9676V26.1933H27.8692V22.2968C27.8692 21.9035 27.6474 21.5623 27.3223 21.3903V18.4687C27.3223 17.9982 27.002 17.588 26.5456 17.474L22.1706 16.3802C21.5227 16.2182 20.8965 16.7095 20.8965 17.375V21.3903C20.5714 21.5623 20.3496 21.9034 20.3496 22.2968V26.1933H18.0254C17.4591 26.1933 17 26.6524 17 27.2187V42.873C17 45.7 19.3 48 22.127 48H46.8731C49.7001 48 52 45.7 52 42.873V27.2187C52 26.6524 51.5409 26.1933 50.9746 26.1933ZM46.5996 19.4941V20.7246H43.1817V19.4941H46.5996ZM43.1817 22.7754H46.5996V26.1933H43.1817V22.7754ZM38.2701 16.895L36.568 20.7246H32.432L30.7299 16.895C32.414 14.4333 36.5885 14.4369 38.2701 16.895ZM32.791 22.7754H36.209V26.1933H32.791V22.7754ZM22.9473 18.6883L25.2715 19.2693V21.2715H22.9473V18.6883ZM22.4004 23.3222H25.8184V26.1933H22.4004V23.3222ZM49.9492 28.2441V30.5683H19.0508V28.2441H49.9492ZM46.8731 45.9492H22.127C20.4308 45.9492 19.0508 44.5692 19.0508 42.873V32.6191H49.9492V42.873C49.9492 44.5692 48.5693 45.9492 46.8731 45.9492Z" fill="#343434"/>
+							<path d="M38.875 36.584H30.125C29.5587 36.584 29.0996 37.0431 29.0996 37.6094V41.9844C29.0996 42.5507 29.5587 43.0098 30.125 43.0098H38.875C39.4413 43.0098 39.9004 42.5507 39.9004 41.9844V37.6094C39.9004 37.0431 39.4413 36.584 38.875 36.584ZM37.8496 40.959H31.1504V38.6348H37.8496V40.959Z" fill="#343434"/>
+						</svg>'
+	  ];
+
+	  echo '<div class="categories_format">
+		<h1 class="categories_header">Choose Categories</h1>';
+		echo '<form method="POST" class="choose_categories_form" action="?page=glasses-new-store">';
+		echo '<div class="categories_grid">';
+
+	  foreach ($categories as $category_key => $category_value) {
+		  echo '<label for="category_' . $category_key . '" class="category_box">
+					<input id="category_' . $category_key . '" name="categories[]" type="checkbox" class="category_checkbox" value="' . $category_key . '">
+					<div class="box_content">';
+		                echo $category_value;
+		                echo '<span class="category_text" style="-webkit-user-select: none; -ms-user-select: none; user-select: none;">';
+		                    echo $category_key;
+		                echo '</span>';
+		            echo '</div>
+				</label>';
+	  }
+
+	  echo '</div>';
+	  echo '<div class="back_next_layout">
+			<a href="?page=glasses">
+			<div class="back">
+				<svg width="8" height="12" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0.000390744 6L6.00039 -6.11959e-08L7.40039 1.4L2.80039 6L7.40039 10.6L6.00039 12L0.000390744 6Z" fill="#475AFF"/>
+				</svg>
+			</div>
+			</a>
+			<input class="next_button" type="submit" value="Next">
+			</div>
+	  ';
+	echo '</form>';
+	echo '</div>';
+  }
+
+	/**
+	 * Uses the @manage_edit-product_columns hook.
+	 *
+	 * @param $columns
+	 *
+	 * @return mixed
+	 */
+  public static function wc_product_table_columns($columns) {
+	  if (get_option('glasses-product-view-option')) {
+		  return $columns;
+	  }
+	  // Remove defaults
+	  unset($columns['sku']);
+	  unset($columns['is_in_stock']);
+	  unset($columns['price']);
+	  unset($columns['product_cat']);
+	  unset($columns['product_tag']);
+	  unset($columns['featured']);
+	  unset($columns['date']);
+
+	  // Add needed
+	  $columns['description'] = 'Description';
+	  $columns['short_description'] = 'Short Description';
+	  $columns['colors'] = 'Colors';
+	  $columns['images'] = 'Images';
+	  $columns['edit'] = 'Edit with Glasses';
+	  return $columns;
+  }
+
+  public static function wc_product_table_columns_content($column, $postid) {
+	  $product = wc_get_product($postid);
+
+	  $product_variations = new WC_Product_Variable($postid);
+	  $product_variations = $product_variations->get_available_variations();
+
+	  $pa_glasses_colors = $product->get_attribute('pa_glasses_color');
+	  $pa_glasses_colors = preg_split ("/\,/", $pa_glasses_colors);
+
+	  if ($column === 'description') {
+		  echo '<div style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">';
+		  echo $product->get_description();
+		  echo '</div>';
+	  }
+
+	  if ($column === 'short_description') {
+		  echo '<div style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;">';
+		  echo $product->get_short_description();
+		  echo '</div>';
+	  }
+
+	  if ($column === 'colors') {
+		  echo '<div style="display: flex; flex-wrap: wrap;">';
+		  //foreach ($product_variations as $product_variation) {
+		  foreach ($pa_glasses_colors as $pa_glasses_color) {
+			  echo '<div style="margin: 5px; border-radius: 50%; width: 16px; height: 16px; background-color: ';
+			  echo $pa_glasses_color;
+			  //echo $product_variation['attributes']['attribute_pa_color'];
+			  echo '"></div>';
+		  }
+		  echo '</div>';
+	  }
+
+	  if ($column === 'images') {
+		  foreach ($product_variations as $product_variation) {
+			  echo '<img style="height: 30px; width: 30px; border-radius: 4px; margin: 5px;" src="';
+			  echo $product_variation['image']['thumb_src'];
+			  echo '">';
+		  }
+	  }
+
+	  if ($column === 'edit') {
+		  echo '<div class="edit-svg">
+		  <svg role="img" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<title>Edit with Glasses</title>
+					<path d="M8.11068 1.19852H6.53053C2.58015 1.19852 1 2.77867 1 6.72905V11.4695C1 15.4199 2.58015 17 6.53053 17H11.271C15.2214 17 16.8015 15.4199 16.8015 11.4695V9.88935" stroke="#475AFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M12.0924 2.00437L5.86658 8.23016C5.62956 8.46719 5.39254 8.93333 5.34513 9.27306L5.0054 11.6512C4.87899 12.5124 5.48735 13.1128 6.34853 12.9943L8.72666 12.6546C9.05849 12.6072 9.52463 12.3702 9.76956 12.1331L15.9954 5.90734C17.0699 4.83284 17.5755 3.58452 15.9954 2.00437C14.4152 0.424216 13.1669 0.929864 12.0924 2.00437Z" stroke="#475AFF" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+					<path d="M11.1987 2.89719C11.4607 3.82747 11.9572 4.67491 12.6406 5.35831C13.324 6.04171 14.1714 6.53818 15.1017 6.80016" stroke="#475AFF" stroke-width="1.5" stroke-miterlimit="10" stroke-linecap="round" stroke-linejoin="round"/>
+		  </svg>';
+		  echo '<div class="glasses_edit_links">';
+		  echo '<a href="admin.php?page=glasses-loading';
+		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'color']);
+		  echo '">';
+		  echo 'Add colors';
+		  echo '</a>';
+		  echo '<a href="admin.php?page=glasses-loading';
+		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'description']);
+		  echo '">';
+		  echo 'Add description';
+		  echo '</a>';
+		  echo '<a href="admin.php?page=glasses-loading';
+		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'short description']);
+		  echo '">';
+		  echo 'Add short description';
+		  echo '</a>';
+		  echo '<a href="admin.php?page=glasses-loading';
+		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'image']);
+		  echo '">';
+		  echo 'Add image';
+		  echo '</a>';
+		  echo '</div>';
+		  echo '</div>';
+	  }
+  }
+
+  public static function wc_add_glasses_bulk_edit($bulk_actions) {
+	  $bulk_actions['images-with-glasses'] = __('Generate Images with Glasses', 'glasses');
+	  $bulk_actions['description-with-glasses'] = __('Write Descriptions with Glasses', 'glasses');
+	  $bulk_actions['short-description-with-glasses'] = __('Write Short Descriptions with Glasses', 'glasses');
+	  $bulk_actions['colors-with-glasses'] = __('Assign Color Attributes with Glasses', 'glasses');
+	  return $bulk_actions;
+  }
+
+  public static function wc_handle_glasses_bulk_edit($redirect_url, $action, $post_ids) {
+	  if ($action === 'colors-with-glasses' || $action === 'description-with-glasses' || $action === 'short-description-with-glasses' || $action === 'images-with-glasses') {
+		  $redirect_url = 'admin.php?page=glasses-loading';
+		  $type = match($action) {
+			  'colors-with-glasses' => 'color',
+			  'description-with-glasses' => 'description',
+			  'short-description-with-glasses' => 'short description',
+			  'images-with-glasses' => 'image',
+			  default => '',
+		  };
+		  $redirect_url = $redirect_url . '&' . http_build_query(['ids' => $post_ids, 'type' => $type, 'count' => count($post_ids)]);
+	  }
+	  return $redirect_url;
+  }
+
+  public static function wc_bulk_edit_success() {
+	  if (get_admin_page_title() !== 'Products') {
+		  return;
+	  }
+	  $type = $_GET['type'];
+	  $count = intval($_GET['count']);
+	  if (!$type || !$count) {
+		  return;
+	  }
+	  printf( '<div class="notice notice-success fade is-dismissible"><p>' .
+	          _n( 'Used Glasses to add ' . $type . ' for %s product.',
+	          'Used Glasses to add ' . $type . 's for %s products.',
+	          $count,
+	          'glasses'
+	          ) . '</p></div>', $count);
   }
 }

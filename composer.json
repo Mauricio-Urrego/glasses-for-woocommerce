@@ -9,7 +9,9 @@
       "src/Admin.php",
       "src/Plugin.php",
       "src/Schema.php",
-      "src/WooCommerce.php"
+      "src/WooCommerce.php",
+      "src/Openai.php",
+      "src/Progress.php"
     ]
   },
   "autoload-dev": {
