@@ -21,6 +21,8 @@ class Schema {
     }
     Schema::ensure_color_tax();
 	Schema::create_progress_table();
+	// To do: switch to wc rest api.
+	//Schema::auth_wc_rest_api();
   }
 
   /**
@@ -54,7 +56,7 @@ class Schema {
 
 	public static function create_progress_table() {
 	  global $wpdb;
-	  $wpdb->query('CREATE TABLE wp_glasses_progress (ProgressID int, TotalFound int, CurrentIndex int, ProductName varchar(255))');
+	  $wpdb->query('CREATE TABLE wp_glasses_progress (ProgressID int, TotalFound int, CurrentIndex int, ProductName varchar(255), Task varchar(100))');
 	  $wpdb->replace('wp_glasses_progress', ['ProgressID' => 1]);
 	}
 
@@ -62,5 +64,4 @@ class Schema {
 		global $wpdb;
 		$wpdb->query('DROP TABLE wp_glasses_progress');
 	}
-
 }

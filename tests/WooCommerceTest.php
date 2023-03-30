@@ -13,4 +13,8 @@ class WooCommerceTest extends TestCase {
   public function testProcess_colors() {
     WooCommerce::process_colors();
   }
+
+  public function testUpdate_Product_Description() {
+	WooCommerce::update_product_description();
+  }
 }
