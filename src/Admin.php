@@ -153,7 +153,7 @@ class Admin {
 			<p>Create a New Store</p>
 		</div>';
 	echo '</a>';
-	echo '<a href="?page=glasses-new-products">';
+	echo '<a href="?page=glasses-new-product">';
 	echo '<div class="option">
 			<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>

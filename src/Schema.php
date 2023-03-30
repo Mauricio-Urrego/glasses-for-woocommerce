@@ -21,8 +21,14 @@ class Schema {
     }
     Schema::ensure_color_tax();
 	Schema::create_progress_table();
-	// To do: switch to wc rest api.
-	//Schema::auth_wc_rest_api();
+  }
+
+  public static function activated_plugin($plugin) {
+	  if ($plugin === 'glasses-for-woocommerce/glasses-for-woocommerce.php') {
+		  if (!get_option('open-ai-api-key')) {
+			  exit(wp_safe_redirect(admin_url('admin.php?page=glasses-settings')));
+		  }
+	  }
   }
 
   /**

@@ -12,7 +12,7 @@ namespace Mauriciourrego\GlassesForWooCommerce;
 class Openai {
 	private function secret_key(){
 		if (!get_option('open-ai-api-key')) {
-			wp_safe_redirect('glasses-settings');
+			wp_die();
 		}
 		return get_option('open-ai-api-key');
 	}
