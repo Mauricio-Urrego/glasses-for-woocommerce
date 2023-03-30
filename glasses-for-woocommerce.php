@@ -2,9 +2,9 @@
 
 /*
   Plugin Name: Glasses for WooCommerce
-  Version: 1.0.3
+  Version: 2.0.0
   Text Domain: glasses-for-woocommerce
-  Description: Assign a color attribute based on the dominant color in the product image.
+  Description: AI assisted store creation. Ever wanted a robot to open an e-commerce shop for you? This is what that would look like.
   Author: Mauricio Urrego
   License: GPL-2.0+
   License URI: http://www.gnu.org/licenses/gpl-2.0
