@@ -1,12 +1,11 @@
 # glasses-for-woocommerce
+Drop-in AI assisted store creation. Ever wanted a robot to open an e-commerce shop for you? This is what that would look like.
 
-Drop-in primary color identification of WooCommerce products. This is thanks to the wonderful [algorithm](https://github.com/pixelogik/ColorCube) by Ole Krause-Sparman and my [port](https://github.com/Mauricio-Urrego/colorcube-php) of this algorithm from the original Python to the translated PHP.
+Image, title, and description creation is thanks to OpenAI's [API](https://openai.com/blog/openai-api)
+Color identification is thanks to the wonderful [algorithm](https://github.com/pixelogik/ColorCube) by Ole Krause-Sparman and my [port](https://github.com/Mauricio-Urrego/colorcube-php) of this algorithm from the original Python to the translated PHP.
 
 ## Developer Installation
 Simply clone into wordpress plugins folder, run ```composer install``` inside newly created glasses-for-woocommerce folder and then activate the plugin.
 
-## Note
-As of right now, version 1.0.3, the functionality is minimal. It only includes one action that will loop through all (currently only published) products and assign them a color auto-magically. Please only click the action once and be patient, an alert will come up when complete. If you see an error in this alert please let the author know. I am not responsible for any lost data, please back up your database before testing out software that is in development.
-
 ## Who is this plugin for?
-Have a large product list in need of color attribute entry? Already have the product images uploaded? Let the plugin do the leg work for you.
+Have a large product list in need of descriptions or images? Don't even have products but want an idea of what your store might look like? Let the plugin do the leg work for you.
