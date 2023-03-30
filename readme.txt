@@ -1,34 +1,37 @@
 === Plugin Name ===
 Contributors: mauriciourrego
-Donate link: https://github.com/Mauricio-Urrego/
-Tags: woocommerce, color, identification, products, automation
+Donate link: https://www.paypal.com/donate/?business=ZYKCSCTUDLUY2&no_recurring=0&item_name=All+proceeds+will+go+to+the+continued+development+of+Glasses+for+WooCommerce&currency_code=USD
+Tags: woocommerce, images, identification, products, copywriting, automation, marketing, development, faker, placeholder
 Requires at least: 5.7
 Tested up to: 6.1.1
-Stable tag: 1.0.3
-Requires PHP: 7.4
+Stable tag: 2.0.0
+Requires PHP: 8
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Identifies the dominant color in your woocommerce products auto-magically. With plans to automate other tasks.
+What if a robot AI opened an e-commerce store.
 
 == Description ==
 
-Identifies the dominant color in your woocommerce products auto-magically. With plans to automate other tasks.
+A very smart AI that can create products for your WooCommerce store. Can generate images, descriptions, titles, and even colors.
 
 == Frequently Asked Questions ==
 
 = Does it take long to process my products? =
 
-If you have a lot of products please give it some time to work, it will let you know when it is complete. If it is taking longer than expected then please report a bug ;)
+Not at all! If it is taking longer than expected then please report a bug ;)
 
 = Why don't the colors have human names assigned to them like red, blue, or green? =
 
-There are many shades of different colors and perhaps your branding calls for different ways of naming them. There will be more support for default names in the future but for now they will be given in a hex form to more easily get started and to be one size fits all.
+There are many shades of different colors and perhaps your branding calls for different ways of naming them. There will be more support for default names in the future but for now they will be given in a hex form to more easily get started and to be one size fits all. After all, this is the way robots see colors.
 
 == Screenshots ==
 
-1. Just click process colors and take a well deserved break. We'll handle it from here :)
-2. This is what it should look like when it is done. You can change the color names from the default hex names to your own color names. You can also see which products have been assigned these colors.
+1. Creating an AI generated store.
+2. Adding an AI generated product.
+3. The home screen.
+4. Here is an example of a very human product it can create ;) This is a joke, remember, it's still a robot making this! But isn't that incredible?
+5. Bulk/individual editing of existing products.
 
 == Changelog ==
 
@@ -40,3 +43,5 @@ There are many shades of different colors and perhaps your branding calls for di
 * Updated screenshots.
 = 1.0.3 =
 * Added progress bar.
+= 2.0.0 =
+* Added generation of images, descriptions, titles, and bulk (as well as individual) product editing. Also, a very nice UI ;)
