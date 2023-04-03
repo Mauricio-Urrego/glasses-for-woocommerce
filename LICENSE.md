@@ -1,4 +1,4 @@
-Dominant color identification of WooCommerce products.
+Building and fortifying of e-commerce shops using AI.
 Copyright (C) 2021 Mauricio Urrego
 
 This program is free software: you can redistribute it and/or modify
