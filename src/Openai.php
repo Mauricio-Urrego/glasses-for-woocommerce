@@ -79,7 +79,7 @@ class Openai {
 			CURLOPT_POSTFIELDS => $post_fields,
 			CURLOPT_HTTPHEADER => array(
 				'Content-Type: application/json',
-				'Authorization: ' . (new Openai)->secret_key()
+				'Authorization: Bearer ' . (new Openai)->secret_key()
 			),
 		));
 

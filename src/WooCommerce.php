@@ -276,6 +276,9 @@ class WooCommerce {
 			  }
 		  }
 
+		  // Shorten filename.
+		  $filename = substr($filename, -50);
+
 		  $args = [
 			  'name' => "$filename.$extension",
 			  'tmp_name' => $tmp,
