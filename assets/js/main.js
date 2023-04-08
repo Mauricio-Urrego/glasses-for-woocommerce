@@ -29,7 +29,7 @@
           let productName = parsedData[2];
           let task = parsedData[3];
           $('.button__progress').width(`${currentIndex/totalItems * 100}%`);
-          jQuery('#progress').empty().append(task + ' ' + currentIndex + '/' + totalItems + ' ' + productName);
+          jQuery('#progress').empty().append(task + ' ' + currentIndex + '/' + totalItems + ' ' + (productName ? productName : ''));
         });
       }, 500);
   })

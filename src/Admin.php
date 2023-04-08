@@ -39,7 +39,7 @@ class Admin {
   public static function enqueue_admin_assets() {
 	  $plugin_url = self::plugin_url();
 	  wp_enqueue_style('glasses', $plugin_url . '/assets/css/style.css');
-	  if (get_current_screen()->id === 'admin_page_glasses-loading') {
+	  if (get_current_screen()->id === 'admin_page_glasses-loading' || get_current_screen()->id === 'posts_page_glasses-loading') {
 		  wp_enqueue_script('glasses', $plugin_url . '/assets/js/main.js', ['jquery']);
 		  wp_localize_script('glasses', 'glasses', ['query_params' => $_SERVER['QUERY_STRING'], 'post_params' => ['categories' => $_POST['categories'] ?? '', 'description' => $_POST['prompt-response'] ?? '']]);
 	  }
@@ -231,7 +231,7 @@ class Admin {
 	  echo '</select>';
 	  echo '<label id="description-label" for="prompt-response">Add Description for Product</label>';
 	  echo '<textarea id="prompt-response" class="new_products_prompt_box--input" name="prompt-response" form="add_products_form"></textarea>';
-	  echo '<input class="add_button" type="submit" value="Add Products">';
+	  echo '<input class="add_button" type="submit" value="Add Product">';
 	  echo '</form>';
 	  echo '</div>';
 	  echo '</div>';
@@ -461,7 +461,6 @@ class Admin {
 	  // Remove defaults
 	  unset($columns['sku']);
 	  unset($columns['is_in_stock']);
-	  unset($columns['price']);
 	  unset($columns['product_cat']);
 	  unset($columns['product_tag']);
 	  unset($columns['featured']);
@@ -471,7 +470,7 @@ class Admin {
 	  $columns['description'] = 'Description';
 	  $columns['short_description'] = 'Short Description';
 	  $columns['colors'] = 'Colors';
-	  $columns['images'] = 'Images';
+	  //$columns['images'] = 'Images';
 	  $columns['edit'] = 'Edit with Glasses';
 	  return $columns;
   }
@@ -509,13 +508,13 @@ class Admin {
 		  echo '</div>';
 	  }
 
-	  if ($column === 'images') {
-		  foreach ($product_variations as $product_variation) {
-			  echo '<img style="height: 30px; width: 30px; border-radius: 4px; margin: 5px;" src="';
-			  echo $product_variation['image']['thumb_src'];
-			  echo '">';
-		  }
-	  }
+	  //if ($column === 'images') {
+	//	  foreach ($product_variations as $product_variation) {
+	//		  echo '<img style="height: 30px; width: 30px; border-radius: 4px; margin: 5px;" src="';
+	//		  echo $product_variation['image']['thumb_src'];
+	//		  echo '">';
+	//	  }
+	  //}
 
 	  if ($column === 'edit') {
 		  echo '<div class="edit-svg">
@@ -546,6 +545,11 @@ class Admin {
 		  echo '">';
 		  echo 'Add image';
 		  echo '</a>';
+		  echo '<a href="admin.php?page=glasses-loading';
+		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'price']);
+		  echo '">';
+		  echo 'Add price';
+		  echo '</a>';
 		  echo '</div>';
 		  echo '</div>';
 	  }
@@ -556,17 +560,19 @@ class Admin {
 	  $bulk_actions['description-with-glasses'] = __('Write Descriptions with Glasses', 'glasses');
 	  $bulk_actions['short-description-with-glasses'] = __('Write Short Descriptions with Glasses', 'glasses');
 	  $bulk_actions['colors-with-glasses'] = __('Assign Color Attributes with Glasses', 'glasses');
+	  $bulk_actions['prices-with-glasses'] = __('Assign Prices with Glasses', 'glasses');
 	  return $bulk_actions;
   }
 
   public static function wc_handle_glasses_bulk_edit($redirect_url, $action, $post_ids) {
-	  if ($action === 'colors-with-glasses' || $action === 'description-with-glasses' || $action === 'short-description-with-glasses' || $action === 'images-with-glasses') {
+	  if ($action === 'colors-with-glasses' || $action === 'description-with-glasses' || $action === 'short-description-with-glasses' || $action === 'images-with-glasses' || $action === 'prices-with-glasses') {
 		  $redirect_url = 'admin.php?page=glasses-loading';
 		  $type = match($action) {
 			  'colors-with-glasses' => 'color',
 			  'description-with-glasses' => 'description',
 			  'short-description-with-glasses' => 'short description',
 			  'images-with-glasses' => 'image',
+			  'prices-with-glasses' => 'price',
 			  default => '',
 		  };
 		  $redirect_url = $redirect_url . '&' . http_build_query(['ids' => $post_ids, 'type' => $type, 'count' => count($post_ids)]);

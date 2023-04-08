@@ -38,6 +38,9 @@ class WooCommerce {
 		  if ($type === 'image') {
 			  self::generate_images($product_ids);
 		  }
+		  if ($type === 'price') {
+			  self::create_prices($product_ids);
+		  }
 
 		  wp_die();
 	  }
@@ -57,6 +60,7 @@ class WooCommerce {
 		  self::update_product_description($product_ids, true);
 		  self::generate_images($product_ids);
 		  self::process_colors($product_ids);
+		  self::create_prices($product_ids);
 
 		  wp_die();
 	  }
@@ -81,8 +85,9 @@ class WooCommerce {
 	  $product_ids = [];
 	  for ($i = 0; $i < $number; $i++) {
 		  progress::updateProgress($i + 1, false);
+		  preg_match('/\w.*\w/', $response[$i], $title);
 		  $product_ids[] = wp_insert_post([
-			  'post_title' => $response[$i],
+			  'post_title' => $title[0],
 			  'post_type' => 'product'
 		  ]);
 	  }
@@ -293,6 +298,32 @@ class WooCommerce {
 		  if (is_wp_error($media_id)) continue;
 
 		  $product->set_image_id($media_id);
+		  $product->save();
+	  }
+
+	  Progress::completeProgress(count($product_ids));
+
+	  wp_reset_postdata();
+  }
+
+  public static function create_prices($product_ids) {
+	  Progress::startProgress(count($product_ids), 'Updating Product Price');
+
+	  foreach ($product_ids as $current_index => $product_id) {
+		  $product = wc_get_product($product_id);
+
+		  progress::updateProgress($current_index, $product);
+
+		  $title = $product->get_title();
+		  $response = Openai::request('Perfect price for a ' . $title . ', only name one price, if you must name them in an array.');
+		  $response = json_decode($response);
+		  $response = $response->choices[0]->text;
+		  preg_match('/\[(.*)\]/', $response, $response);
+		  $response = explode(', ', $response[1]);
+		  $response = end($response);
+		  $response = preg_match('/[\d.]+/', $response, $match);
+		  $product->set_regular_price($match[0]);
+		  $product->set_price($match[0]);
 		  $product->save();
 	  }
 

@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/donate/?business=ZYKCSCTUDLUY2&no_recurring=
 Tags: woocommerce, images, identification, products, copywriting, automation, marketing, development, faker, placeholder
 Requires at least: 5.7
 Tested up to: 6.2
-Stable tag: 2.0.3
+Stable tag: 2.1.0
 Requires PHP: 8
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -51,3 +51,5 @@ There are many shades of different colors and perhaps your branding calls for di
 * More bug fixes.
 = 2.0.3 =
 * Fixed bugs with image generation.
+= 2.1.0 =
+* Added price generation.
