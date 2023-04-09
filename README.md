@@ -1,7 +1,7 @@
 # glasses-for-woocommerce
 Drop-in AI assisted store creation. Ever wanted a robot to open an e-commerce shop for you? This is what that would look like.
 
-Image, title, and description creation is thanks to OpenAI's [API](https://openai.com/blog/openai-api).
+Image, title, price, and description creation is thanks to OpenAI's [API](https://openai.com/blog/openai-api).
 
 Color identification is thanks to the wonderful [algorithm](https://github.com/pixelogik/ColorCube) by Ole Krause-Sparman and my [port](https://github.com/Mauricio-Urrego/colorcube-php) of this algorithm from the original Python to the translated PHP.
 

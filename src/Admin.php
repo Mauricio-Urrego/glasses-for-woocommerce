@@ -252,7 +252,7 @@ class Admin {
 		  'open-ai-api-key',
 		  __('Open AI API Key', 'glasses'),
 		  function() {
-			  echo '<input name="open-ai-api-key" id="open-ai-api-key" type="text" placeholder="Openai API Key" value="' . get_option('open-ai-api-key') . '">';
+			  echo '<input name="open-ai-api-key" id="open-ai-api-key" type="text" pattern="sk-.*" placeholder="sk-" value="' . get_option('open-ai-api-key') . '">';
 		  },
 		  'glasses-settings',
 		  'api-keys',
