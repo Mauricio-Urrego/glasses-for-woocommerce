@@ -1,5 +1,5 @@
 Building and fortifying of e-commerce shops using AI.
-Copyright (C) 2021 Mauricio Urrego
+Copyright (C) 2023 Mauricio Urrego
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

@@ -4,7 +4,7 @@ Donate link: https://www.paypal.com/donate/?business=ZYKCSCTUDLUY2&no_recurring=
 Tags: ai, woocommerce, images, identification, products, copywriting, automation, marketing, development, faker, placeholder
 Requires at least: 5.7
 Tested up to: 6.2
-Stable tag: 2.1.0
+Stable tag: 2.1.1
 Requires PHP: 8
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
