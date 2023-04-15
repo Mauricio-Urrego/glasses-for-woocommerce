@@ -77,10 +77,17 @@ class WooCommerce {
 
 	  Progress::startProgress($number, 'Creating Product(s)...');
 
-	  $response = Openai::request('Come up with ' . $number . ' product name(s) in the category(s) of ' . $categories . ' with a description of ' . $description . ' and make the response text a comma separated array:');
+	  $response = Openai::request('Come up with ' . $number . ' product name(s) in the category(s) of ' . $categories . ' with a description of ' . $description . ' and make the response text a comma separated array with an oxford comma and no and:');
 	  $response = json_decode($response);
 	  $response = $response->choices[0]->text;
 	  $response = explode(', ', $response);
+	  if (count($response) != $number) {
+		  $titleCount = count($response);
+		  $howManyLeft = $number - $titleCount;
+		  for ($i = 0; $i < $howManyLeft; $i++) {
+			  $response[] = 'error';
+		  }
+	  }
 
 	  $product_ids = [];
 	  for ($i = 0; $i < $number; $i++) {
@@ -322,9 +329,11 @@ class WooCommerce {
 		  $response = explode(', ', $response[1]);
 		  $response = end($response);
 		  $response = preg_match('/[\d.]+/', $response, $match);
-		  $product->set_regular_price($match[0]);
-		  $product->set_price($match[0]);
-		  $product->save();
+		  if ($match[0]) {
+			  $product->set_regular_price($match[0]);
+			  $product->set_price($match[0]);
+			  $product->save();
+		  }
 	  }
 
 	  Progress::completeProgress(count($product_ids));
