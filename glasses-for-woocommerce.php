@@ -1,8 +1,8 @@
 <?php
 
 /*
-  Plugin Name: Glasses for WooCommerce
-  Version: 2.1.2
+  Plugin Name: AI Glasses for WooCommerce
+  Version: 2.1.3
   Text Domain: glasses-for-woocommerce
   Description: AI assisted store creation. Ever wanted a robot to open an e-commerce shop for you? This is what that would look like.
   Author: Mauricio Urrego

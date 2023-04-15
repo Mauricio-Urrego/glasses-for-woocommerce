@@ -1,10 +1,10 @@
-=== Plugin Name ===
+=== AI Glasses for WooCommerce ===
 Contributors: mauriciourrego
 Donate link: https://www.paypal.com/donate/?business=ZYKCSCTUDLUY2&no_recurring=0&item_name=All+proceeds+will+go+to+the+continued+development+of+Glasses+for+WooCommerce&currency_code=USD
 Tags: ai, woocommerce, images, identification, products, copywriting, automation, marketing, development, faker, placeholder
 Requires at least: 5.7
 Tested up to: 6.2
-Stable tag: 2.1.2
+Stable tag: 2.1.3
 Requires PHP: 8
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -71,3 +71,5 @@ There are many shades of different colors and perhaps your branding calls for di
 * Updated some screenshots and text.
 = 2.1.2 =
 * Bug fixes.
+= 2.1.3 =
+* Updated plugin name.
