@@ -1,15 +1,15 @@
-=== AI Glasses for WooCommerce ===
+=== Glasses: AI Product Creation for WooCommerce ===
 Contributors: mauriciourrego
 Donate link: https://www.paypal.com/donate/?business=ZYKCSCTUDLUY2&no_recurring=0&item_name=All+proceeds+will+go+to+the+continued+development+of+Glasses+for+WooCommerce&currency_code=USD
-Tags: ai, woocommerce, images, identification, products, copywriting, automation, marketing, development, faker, placeholder
+Tags: AI, copywriting, gpt, openai, woocommerce
 Requires at least: 5.7
 Tested up to: 6.2
-Stable tag: 2.1.3
+Stable tag: 2.1.4
 Requires PHP: 8
 License: GPLv2
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-What if a robot AI opened an e-commerce store.
+What if an intelligent AI opened an e-commerce shop with optimized SEO. Let OpenAI come up with product titles, images, prices, descriptions, and colors for you from scratch. Or add to already existing products!
 
 == Description ==
 
@@ -73,3 +73,5 @@ There are many shades of different colors and perhaps your branding calls for di
 * Bug fixes.
 = 2.1.3 =
 * Updated plugin name.
+= 2.1.4 =
+* Updated plugin name again.
