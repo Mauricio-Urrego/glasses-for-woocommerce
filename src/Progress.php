@@ -6,13 +6,27 @@
 
 namespace Mauriciourrego\GlassesForWooCommerce;
 
+use JetBrains\PhpStorm\NoReturn;
+
 /**
  * Progress for progress bar.
  */
 class Progress {
-	public static function startProgress($count, $task) {
+	/**
+	 * @var $wpdb
+	 */
+	private $wpdb;
+
+	/**
+	 * Progress constructor.
+	 */
+	public function __construct() {
 		global $wpdb;
-		$wpdb->update(
+		$this->wpdb = $wpdb;
+	}
+
+	public function startProgress($count, $task): void {
+		$this->wpdb->update(
 			'wp_glasses_progress',
 			[
 				'TotalFound' => $count,
@@ -26,9 +40,8 @@ class Progress {
 		);
 	}
 
-	public static function updateProgress($current_index, $product = true) {
-		global $wpdb;
-		$wpdb->update(
+	public function updateProgress($current_index, $product = true): void {
+		$this->wpdb->update(
 			'wp_glasses_progress',
 			[
 				'CurrentIndex' => $current_index,
@@ -40,9 +53,8 @@ class Progress {
 		);
 	}
 
-	public static function completeProgress($current_index) {
-		global $wpdb;
-		$wpdb->update(
+	public function completeProgress($current_index): void {
+		$this->wpdb->update(
 			'wp_glasses_progress',
 			[
 				'CurrentIndex' => $current_index,
@@ -51,5 +63,17 @@ class Progress {
 				'ProgressID' => 1
 			]
 		);
+	}
+
+	public static function checkProgress(): void {
+		global $wpdb;
+		$result = [];
+		$result[] = $wpdb->get_var("SELECT TotalFound FROM wp_glasses_progress WHERE ProgressID=1");
+		$result[] = $wpdb->get_var("SELECT CurrentIndex FROM wp_glasses_progress WHERE ProgressID=1");
+		$result[] = $wpdb->get_var("SELECT ProductName FROM wp_glasses_progress WHERE ProgressID=1");
+		$result[] = $wpdb->get_var("SELECT Task FROM wp_glasses_progress WHERE ProgressID=1");
+		echo json_encode($result);
+
+		wp_die();
 	}
 }

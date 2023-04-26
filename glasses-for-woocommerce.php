@@ -1,7 +1,7 @@
 <?php
 
 /*
-  Plugin Name: Glasses: AI Product Creation for WooCommerce
+  Plugin Name: ChatGPT Open AI Images & Content for WooCommerce
   Version: 2.1.4
   Text Domain: glasses-for-woocommerce
   Description: AI assisted store creation. Ever wanted a robot to open an e-commerce shop for you? This is what that would look like.
@@ -26,7 +26,7 @@ if (!defined('ABSPATH')) {
  */
 function classloader($class) {
   static $ns_offset;
-  if (strpos($class, __NAMESPACE__ . '\\') === 0) {
+  if (str_starts_with( $class, __NAMESPACE__ . '\\')) {
     if ($ns_offset === NULL) {
       $ns_offset = strlen(__NAMESPACE__) + 1;
     }
@@ -40,7 +40,7 @@ register_deactivation_hook(__FILE__, __NAMESPACE__ . '\Schema::deactivate');
 register_uninstall_hook(__FILE__, __NAMESPACE__ . '\Schema::uninstall');
 
 add_action('activated_plugin', __NAMESPACE__ . '\Schema::activated_plugin');
-add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadTextdomain');
+add_action('plugins_loaded', __NAMESPACE__ . '\Plugin::loadPluginTextDomain');
 add_action('init', __NAMESPACE__ . '\WooCommerce::init', 20);
 add_action('admin_init', __NAMESPACE__ . '\Admin::admin_init');
 add_action('admin_menu', __NAMESPACE__ . '\Admin::add_glasses_menu_page');

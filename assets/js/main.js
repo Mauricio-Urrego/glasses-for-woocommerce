@@ -1,18 +1,20 @@
 (function($) {
   $(document).ready(function() {
       let data = {
-        'action': 'glasses_loading',
+        'action': 'glassesLoading',
         'query_params': glasses.query_params,
         'post_params': glasses.post_params
       };
 
       let pollingData = {
-        'action': 'check_progress',
+        'action': 'checkProgress',
       }
 
       $.post(ajaxurl, data, function(response) {
         if (response) {
-          window.confirm(response);
+          if (window.confirm(response)) {
+              window.open('admin.php?page=glasses-settings', '_self');
+          }
         }
         else {
           let queries = new URLSearchParams(glasses.query_params);

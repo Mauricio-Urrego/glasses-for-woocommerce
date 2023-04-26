@@ -7,146 +7,179 @@
 
 namespace Mauriciourrego\GlassesForWooCommerce;
 
+use Exception;
 use Mauriciourrego\ColorcubePhp\ColorCube;
-use WC_Product_Variable;
-use WC_Product_Attribute;
 use Phim\Color;
 use Phim\Color\RgbColor;
+use WC_Product_Attribute;
+use WC_Product_Variable;
 
 class WooCommerce {
 
-  public static function init() {
-    add_action('wp_ajax_glasses_loading', __CLASS__ . '::glasses_loading');
-    add_action('wp_ajax_check_progress', __CLASS__ . '::check_progress');
-  }
+	/**
+	 * Initializes the WooCommerce hooks.
+	 */
+    public static function init(): void {
+      add_action('wp_ajax_glassesLoading', __CLASS__ . '::glassesLoading');
+      add_action('wp_ajax_checkProgress', __NAMESPACE__ . '\Progress::checkProgress');
+    }
 
-  public static function glasses_loading(): void {
-	  parse_str($_POST['query_params'], $output);
-	  if (isset($output['type'])) {
-		  $product_ids = $output['ids'];
-		  $type = $output['type'];
+	/**
+	 * Handles the glasses_loading AJAX request.
+	 */
+    public static function glassesLoading(): void {
+		  $queryParams = $_POST['query_params'] ?? '';
+		  parse_str($queryParams, $params);
+		  $type = $params['type'] ?? '';
 
-		  if ($type === 'color') {
-			  self::process_colors($product_ids);
-		  }
-		  if ($type === 'description') {
-			  self::update_product_description($product_ids);
-		  }
-		  if ($type === 'short description') {
-			  self::update_product_description($product_ids, true);
-		  }
-		  if ($type === 'image') {
-			  self::generate_images($product_ids);
-		  }
-		  if ($type === 'price') {
-			  self::create_prices($product_ids);
+		  if (!empty($type)) {
+			  $productIds = $params['ids'];
+			  switch ($type) {
+				  case 'color':
+					  self::processColors($productIds);
+					  break;
+				  case 'description':
+					  self::updateProductDescription($productIds);
+					  break;
+				  case 'short description':
+					  self::updateProductDescription($productIds, true);
+					  break;
+				  case 'image':
+					  self::generateImages($productIds);
+					  break;
+				  case 'price':
+					  self::createPrices($productIds);
+					  break;
+			  }
+		  } else {
+			  $postParams = $_POST['post_params'] ?? '';
+			  $categories = $postParams['categories'] ?? '';
+			  $description = $postParams['description'] ?? '';
+
+			  if (!empty($categories) && !empty($description)) {
+				  $store = is_array($categories);
+				  $productIds = self::createProducts($categories, $description, $store);
+
+				  self::updateProductDescription($productIds);
+				  self::updateProductDescription($productIds, true);
+				  self::generateImages($productIds);
+				  self::processColors($productIds);
+				  self::createPrices($productIds);
+			  }
 		  }
 
 		  wp_die();
+    }
+
+	/**
+	 * Creates new products or stores based on the provided categories and description.
+	 *
+	 * @param string|array $categories The product categories.
+	 * @param string $description The product description.
+	 * @param bool $isStore Whether it's a multiple or a singular product creation. Stores are multiple.
+	 *
+	 * @return array The product IDs.
+	 */
+  public static function createProducts(string|array $categories, string $description, bool $isStore = false): array {
+	  $numberOfProducts = $isStore ? 10 : 1;
+	  if ($isStore) {
+		  $option = get_option('glasses-how-many');
+		  $numberOfProducts = $option ?: $numberOfProducts;
 	  }
 
-	  if (empty($output['type']) && !empty($_POST['post_params']['categories']) && !empty($_POST['post_params']['description'])) {
-		  $categories = $_POST['post_params']['categories'];
-		  $description = $_POST['post_params']['description'];
-		  $store = false;
+	  (new Progress)->startProgress($numberOfProducts, 'Creating Product(s)...');
 
-		  if (is_array($categories)) {
-			  $store = true;
-			  $categories = implode(", ", $categories);
+	  try {
+		  $response = (new Openai)->requestCompletions('Come up with ' . $numberOfProducts . ' product name(s) in the category(s) of ' . $categories . ' with a description of ' . $description . ' and make the response text comma separated with an oxford comma and no word and or numbers. Just the names. (example: name1, name2, name3, etc.):');
+		  $response = json_decode($response)->choices[0]->text;
+		  $response = trim(preg_replace('/\s\s+/', '', $response));
+		  $productNames = explode(', ', $response);
+		  $numberOfProductNames = count($productNames);
+
+		  // Check if we received the expected number of product names
+		  if ($numberOfProductNames !== $numberOfProducts) {
+			  if ($numberOfProductNames < $numberOfProducts) {
+				  $numberOfMissingProducts = $numberOfProducts - $numberOfProductNames;
+
+				  for ($i = 0; $i < $numberOfMissingProducts; $i++) {
+					  $productNames[] = 'error generating';
+				  }
+			  }
+			  elseif ($numberOfProductNames > $numberOfProducts) {
+				  $productNames = array_slice($productNames, 0, 1);
+			  }
 		  }
 
-		  $product_ids = self::new_product_or_store($categories, $description, $store);
-		  self::update_product_description($product_ids);
-		  self::update_product_description($product_ids, true);
-		  self::generate_images($product_ids);
-		  self::process_colors($product_ids);
-		  self::create_prices($product_ids);
+		  $productIds = [];
+		  for ($i = 0; $i < $numberOfProducts; $i++) {
+			  (new Progress)->updateProgress($i + 1, false);
+			  preg_match('/\w.*\w/', $productNames[$i], $title);
+			  $productIds[] = wp_insert_post([
+				  'post_title' => $title[0],
+				  'post_type' => 'product'
+			  ]);
+		  }
 
-		  wp_die();
+		  (new Progress)->completeProgress(count($productIds));
+
+		  return $productIds;
+	  }
+	  catch(Exception $e) {
+		  wp_die('Error: ' . $e);
 	  }
   }
 
-  public static function new_product_or_store($categories, $description, $store = false) {
-	  $number = 1;
-	  if ($store) {
-		  $number = 10;
-		  if (get_option('glasses-how-many')) {
-			  $number = get_option('glasses-how-many');
-		  }
-	  }
+  public static function processColors(array $productIds): void {
+	  // Ensure color taxonomy exists.
+	  ( new Schema )->ensureColorTax();
 
-	  Progress::startProgress($number, 'Creating Product(s)...');
+	  // Start progress tracking.
+	  (new Progress)->startProgress(count($productIds), 'Identifying Colors');
 
-	  $response = Openai::request('Come up with ' . $number . ' product name(s) in the category(s) of ' . $categories . ' with a description of ' . $description . ' and make the response text a comma separated array with an oxford comma and no and:');
-	  $response = json_decode($response);
-	  $response = $response->choices[0]->text;
-	  $response = explode(', ', $response);
-	  if (count($response) != $number) {
-		  $titleCount = count($response);
-		  $howManyLeft = $number - $titleCount;
-		  for ($i = 0; $i < $howManyLeft; $i++) {
-			  $response[] = 'error';
-		  }
-	  }
+	  foreach ($productIds as $index => $productId) {
+		// Get product and check if it exists.
+	    $product = wc_get_product($productId);
+		if (!$product) {
+			continue;
+		}
 
-	  $product_ids = [];
-	  for ($i = 0; $i < $number; $i++) {
-		  progress::updateProgress($i + 1, false);
-		  preg_match('/\w.*\w/', $response[$i], $title);
-		  $product_ids[] = wp_insert_post([
-			  'post_title' => $title[0],
-			  'post_type' => 'product'
-		  ]);
-	  }
+		// Update progress tracker.
+	    (new Progress)->updateProgress($index, $product);
 
-	  Progress::completeProgress(count($product_ids));
+	    // Declare container for color identification.
+        $imageIds = [];
 
-	  return $product_ids;
-  }
+        // Fill containers.
+        $imageIds[] = $product->get_image_id();
 
-  public static function process_colors($product_ids): void {
-	Schema::ensure_color_tax();
-
-	Progress::startProgress(count($product_ids), 'Identifying Colors');
-
-    foreach ($product_ids as $current_index => $product_id) {
-	  $product = wc_get_product($product_id);
-	  progress::updateProgress($current_index, $product);
-
-	  // Declare container for color identification.
-      $image_ids = [];
-
-      // Fill containers.
-      $image_ids[] = $product->get_image_id();
-
-      // Collect image URLs.
-      $image_urls = [];
-      if ($image_ids) {
-        foreach ($image_ids as $image_id) {
-          $image_urls[] = wp_get_attachment_image_url($image_id);
+        // Collect image URLs.
+        $imageUrls = [];
+        if ($imageIds) {
+          foreach ($imageIds as $imageId) {
+            $imageUrls[] = wp_get_attachment_image_url($imageId);
+          }
         }
-      }
 
-	  $product_variations = new WC_Product_Variable($product_id);
-	  $product_variations = $product_variations->get_available_variations();
+	  $productVariations = new WC_Product_Variable($productId);
+	  $productVariations = $productVariations->get_available_variations();
 
-	  foreach ($product_variations as $product_variation) {
-		$image_urls[] = $product_variation['image']['thumb_src'];
+	  foreach ($productVariations as $productVariation) {
+		$imageUrls[] = $productVariation['image']['thumb_src'];
 	  }
 
 	  $cc = new ColorCube();
 
-      foreach ($image_urls as $image_url) {
-        if (empty($image_url)) {
-          break;
+      foreach ($imageUrls as $imageUrl) {
+        if (empty($imageUrl)) {
+          continue;
         }
-        $image = imagecreatefromjpeg($image_url);
+        $image = imagecreatefromjpeg($imageUrl);
 		if (!$image) {
-			$image = imagecreatefrompng($image_url);
+			$image = imagecreatefrompng($imageUrl);
 		}
         $colors = $cc->get_colors($image);
         if (empty($colors)) {
-          break;
+          continue;
         }
         $rgbColor = new RgbColor($colors[0][0], $colors[0][1], $colors[0][3]);
 
@@ -200,27 +233,28 @@ class WooCommerce {
         $product->save();
 
         // Add the new term in the product.
-        if (!has_term($term_name, $taxonomy, $product_id)) {
-          wp_set_object_terms($product_id, $term_slug, $taxonomy, true);
+        if (!has_term($term_name, $taxonomy, $productId)) {
+          wp_set_object_terms($productId, $term_slug, $taxonomy, true);
         }
       }
     }
 
-	Progress::completeProgress(count($product_ids));
+	// Complete progress tracking.
+	(new Progress)->completeProgress(count($productIds));
 
 	wp_reset_postdata();
   }
 
-  public static function update_product_description($product_ids, $short = false): void {
-	  Progress::startProgress(count($product_ids), 'Updating Product ' . ($short ? 'Short ' : '') . 'Description');
+  public static function updateProductDescription(array $productIds, bool $short = false): void {
+	  (new Progress)->startProgress(count($productIds), 'Updating Product ' . ($short ? 'Short ' : '') . 'Description');
 
-	  foreach ($product_ids as $current_index => $product_id) {
-		  $product = wc_get_product($product_id);
+	  foreach ($productIds as $current_index => $productId) {
+		  $product = wc_get_product($productId);
 
-		  progress::updateProgress($current_index, $product);
+		  (new Progress)->updateProgress($current_index, $product);
 
 		  $title = $product->get_title();
-		  $response = Openai::request('Write a product description for a' . $title . ($short ? ' in 1-2 sentences' : '') . ':');
+		  $response = (new Openai)->requestCompletions('Write a product description for a' . $title . ($short ? ' in 1-2 sentences' : '') . ':');
 		  $response = json_decode($response);
 		  $response = $response->choices[0]->text;
 		  if ($short) {
@@ -232,21 +266,24 @@ class WooCommerce {
 		  $product->save();
 	  }
 
-	  Progress::completeProgress(count($product_ids));
+	  (new Progress)->completeProgress(count($productIds));
 
 	  wp_reset_postdata();
   }
 
-  public static function generate_images($product_ids): void {
-	  Progress::startProgress(count($product_ids), 'Generating Images');
+	/**
+	 * @throws Exception
+	 */
+	public static function generateImages($productIds): void {
+	  (new Progress)->startProgress(count($productIds), 'Generating Images');
 
-	  foreach ($product_ids as $current_index => $product_id) {
-		  $product = wc_get_product($product_id);
+	  foreach ($productIds as $current_index => $productId) {
+		  $product = wc_get_product($productId);
 
-		  progress::updateProgress($current_index, $product);
+		  (new Progress)->updateProgress($current_index, $product);
 
 		  $title = $product->get_title();
-		  $response = Openai::requestGenerateImages('Studio image of a product with the title of: ' . $title);
+		  $response = ( new Openai )->requestImages( 'Studio image of a product with the title of: ' . $title);
 		  $response = json_decode($response);
 
 		  $image_url = $response->data[0]->url;
@@ -308,23 +345,22 @@ class WooCommerce {
 		  $product->save();
 	  }
 
-	  Progress::completeProgress(count($product_ids));
+	  ( new Progress )->completeProgress(count($productIds));
 
 	  wp_reset_postdata();
   }
 
-  public static function create_prices($product_ids) {
-	  Progress::startProgress(count($product_ids), 'Updating Product Price');
+  public static function createPrices($productIds): void {
+	  ( new Progress )->startProgress(count($productIds), 'Updating Product Price');
 
-	  foreach ($product_ids as $current_index => $product_id) {
-		  $product = wc_get_product($product_id);
+	  foreach ($productIds as $current_index => $productId) {
+		  $product = wc_get_product($productId);
 
-		  progress::updateProgress($current_index, $product);
+		  ( new Progress )->updateProgress($current_index, $product);
 
 		  $title = $product->get_title();
-		  $response = Openai::request('Perfect price for a ' . $title . ', only name one price, if you must name them in an array.');
-		  $response = json_decode($response);
-		  $response = $response->choices[0]->text;
+		  $response = ( new Openai )->requestCompletions( 'Perfect price for a ' . $title . ', only name one price, if you must name them in an array.');
+		  $response = json_decode($response)->choices[0]->text;
 		  preg_match('/\[(.*)\]/', $response, $response);
 		  $response = explode(', ', $response[1]);
 		  $response = end($response);
@@ -336,20 +372,8 @@ class WooCommerce {
 		  }
 	  }
 
-	  Progress::completeProgress(count($product_ids));
+	  ( new Progress )->completeProgress(count($productIds));
 
 	  wp_reset_postdata();
-  }
-
-  public static function check_progress() {
-	  global $wpdb;
-	  $result = [];
-	  $result[] = $wpdb->get_var("SELECT TotalFound FROM wp_glasses_progress WHERE ProgressID=1");
-	  $result[] = $wpdb->get_var("SELECT CurrentIndex FROM wp_glasses_progress WHERE ProgressID=1");
-	  $result[] = $wpdb->get_var("SELECT ProductName FROM wp_glasses_progress WHERE ProgressID=1");
-	  $result[] = $wpdb->get_var("SELECT Task FROM wp_glasses_progress WHERE ProgressID=1");
-	  echo json_encode($result);
-
-	  wp_die();
   }
 }

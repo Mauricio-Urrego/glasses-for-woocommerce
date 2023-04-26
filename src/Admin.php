@@ -14,7 +14,7 @@ use WC_Product_Variable;
  */
 class Admin {
 
-  public static function admin_init() {
+  public static function admin_init(): void {
     add_action('admin_enqueue_scripts', __CLASS__ . '::enqueue_admin_assets');
     if (!class_exists('WooCommerce')) {
       add_action('admin_notices', __CLASS__ . '::enable_woocommerce');
@@ -32,11 +32,11 @@ class Admin {
    *
    * @return string
    */
-  public static function plugin_url() {
+  public static function plugin_url(): string {
     return untrailingslashit(plugins_url('/', GLASSES_PLUGIN_FILE));
   }
 
-  public static function enqueue_admin_assets() {
+  public static function enqueue_admin_assets(): void {
 	  $plugin_url = self::plugin_url();
 	  wp_enqueue_style('glasses', $plugin_url . '/assets/css/style.css');
 	  if (get_current_screen()->id === 'admin_page_glasses-loading' || get_current_screen()->id === 'posts_page_glasses-loading') {
@@ -45,13 +45,13 @@ class Admin {
 	  }
   }
 
-  public static function enable_woocommerce() {
+  public static function enable_woocommerce(): void {
 	  $class = 'notice notice-error';
 	  $message = __('Oops! Enable WooCommerce plugin to use Glasses for WooCommerce.', 'glasses-for-woocommerce');
 	  printf('<div class="%1$s"><p>%2$s</p></div>', esc_attr( $class ), esc_html($message));
   }
 
-  public static function add_glasses_menu_page() {
+  public static function add_glasses_menu_page(): void {
 	$glasses_icon = 'data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKWwo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOmxheWVyTmFtZSBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6bWFzayBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCB0ZXh0CiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6d2lkdGggQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIHBhdGgKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgcGF0aAogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBwYXRoCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6YmxlbmRNb2RlIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93Q29sb3IgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgaW1hZ2UKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93UmFkaXVzIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93T2Zmc2V0IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGltYWdlCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpibGVuZE1vZGUgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd0NvbG9yIENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dPcGFjaXR5IENEQVRBICNJTVBMSUVEID4KPCFBVFRMSVNUIGcKICB4bWxuczp2ZWN0b3JuYXRvciBDREFUQSAjRklYRUQgImh0dHA6Ly92ZWN0b3JuYXRvci5pbyIKICB2ZWN0b3JuYXRvcjpzaGFkb3dSYWRpdXMgQ0RBVEEgI0lNUExJRUQgPgo8IUFUVExJU1QgZwogIHhtbG5zOnZlY3Rvcm5hdG9yIENEQVRBICNGSVhFRCAiaHR0cDovL3ZlY3Rvcm5hdG9yLmlvIgogIHZlY3Rvcm5hdG9yOnNoYWRvd09mZnNldCBDREFUQSAjSU1QTElFRCA+CjwhQVRUTElTVCBnCiAgeG1sbnM6dmVjdG9ybmF0b3IgQ0RBVEEgI0ZJWEVEICJodHRwOi8vdmVjdG9ybmF0b3IuaW8iCiAgdmVjdG9ybmF0b3I6c2hhZG93QW5nbGUgQ0RBVEEgI0lNUExJRUQgPgoKPCFFTlRJVFkgJSBTVkcuZmlsdGVyLmV4dHJhLmNvbnRlbnQgICJ8IGZlRHJvcFNoYWRvdyIgPgo8IUVMRU1FTlQgZmVEcm9wU2hhZG93IEVNUFRZPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR4IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHN0ZERldmlhdGlvbiBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1vcGFjaXR5IENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIGluIENEQVRBICNJTVBMSUVEPgo8IUFUVExJU1QgZmVEcm9wU2hhZG93CiAgeG1sbnM6c3ZnIENEQVRBICNGSVhFRCAiaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkIgogIHJlc3VsdCBDREFUQSAjSU1QTElFRD4KPCFBVFRMSVNUIGZlRHJvcFNoYWRvdwogIHhtbG5zOnN2ZyBDREFUQSAjRklYRUQgImh0dHA6Ly93d3cudzMub3JnL0dyYXBoaWNzL1NWRy8xLjEvRFREL3N2ZzExLmR0ZCIKICBmbG9vZC1jb2xvciBDREFUQSAjSU1QTElFRD4KXQo+CjwhLS0gQ3JlYXRlZCB3aXRoIFZlY3Rvcm5hdG9yIChodHRwOi8vdmVjdG9ybmF0b3IuaW8vKSAtLT4KPHN2ZyBoZWlnaHQ9IjEwMCUiIHN0cm9rZS1taXRlcmxpbWl0PSIxMCIgc3R5bGU9ImZpbGwtcnVsZTpub256ZXJvO2NsaXAtcnVsZTpldmVub2RkO3N0cm9rZS1saW5lY2FwOnJvdW5kO3N0cm9rZS1saW5lam9pbjpyb3VuZDsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHdpZHRoPSIxMDAlIiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnZlY3Rvcm5hdG9yPSJodHRwOi8vdmVjdG9ybmF0b3IuaW8iIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj4KPGRlZnMvPgo8ZyBpZD0iVW50aXRsZWQiIHZlY3Rvcm5hdG9yOmxheWVyTmFtZT0iVW50aXRsZWQiPgo8cGF0aCBkPSJNNDkzLjIzNCAyMzguODE5TDQ4Ni4xNzkgMjM4LjgxOUM0ODIuNDI1IDIxNC44MTEgNDcxLjA0NiAxOTIuNzM4IDQ1My43NTIgMTc2LjAxMkM0MzQuMDY4IDE1Ny4xMjQgNDA4LjQ2NyAxNDYuNjU2IDM4MS42MTQgMTQ2LjY1NkMzNTguMjg5IDE0Ni42NTYgMzM2LjEwMiAxNTQuMjggMzE3LjY2OSAxNjguNzNDMzAxLjk2OCAxODEuMDE4IDI5MC4xMzQgMTk3LjI4OSAyODIuOTY2IDIxNi4xNzdDMjc1LjAwMSAyMTAuOTQzIDI2NS40NDQgMjA3Ljg3MSAyNTYgMjA3Ljg3MUMyNDYuNTU2IDIwNy44NzEgMjM2Ljk5OSAyMTAuODI5IDIyOS4wMzQgMjE2LjE3N0MyMjEuOTc5IDE5Ny4yODkgMjEwLjE0NiAxODEuMDE4IDE5NC4zMzEgMTY4LjczQzE3NS44OTggMTU0LjI4IDE1My43MTEgMTQ2LjY1NiAxMzAuMzg2IDE0Ni42NTZDMTAzLjUzMyAxNDYuNjU2IDc3LjkzMjUgMTU3LjAxIDU4LjI0ODMgMTc1Ljc4NEM0MC45NTM2IDE5Mi43MzggMjkuNTc1NSAyMTQuOTI1IDI1LjgyMDcgMjM4LjkzM0wxOC43NjYzIDIzOC45MzNDOS42NjM3NyAyMzguOTMzIDIuMjY3OTkgMjQ2LjU1NiAyLjI2Nzk5IDI1NkMyLjI2Nzk5IDI2NS40NDQgOS42NjM3NyAyNzMuMDY3IDE4Ljc2NjMgMjczLjA2N0wyNS44MjA3IDI3My4wNjdDMjkuNTc1NSAyOTcuMTg5IDQwLjk1MzYgMzE5LjI2MiA1OC4yNDgzIDMzNS45ODhDNzcuOTMyNSAzNTQuODc2IDEwMy41MzMgMzY1LjM0NCAxMzAuMzg2IDM2NS4zNDRDMTg4Ljc1NSAzNjUuMzQ0IDIzNi4zMTYgMzE2LjQxOCAyMzYuMzE2IDI1Ni4yMjhMMjM2LjMxNiAyNTZDMjM2LjMxNiAyNDkuMjg3IDI0NC4xNjcgMjM5LjA0NyAyNTYgMjM5LjA0N0MyNjcuODMzIDIzOS4wNDcgMjc1LjY4NCAyNDkuMjg3IDI3NS42ODQgMjU2TDI3NS42ODQgMjU2LjExNEMyNzUuNjg0IDMxNi4zMDQgMzIzLjI0NSAzNjUuMjMgMzgxLjYxNCAzNjUuMjNDNDA4LjU4MSAzNjUuMjMgNDM0LjE4MSAzNTQuODc2IDQ1My43NTIgMzM1Ljg3NEM0NzEuMDQ2IDMxOS4xNDkgNDgyLjQyNSAyOTYuOTYxIDQ4Ni4xNzkgMjcyLjg0TDQ5My4yMzQgMjcyLjg0QzUwMi4zMzYgMjcyLjg0IDUwOS43MzIgMjY1LjIxNiA1MDkuNzMyIDI1NS43NzJDNTA5LjczMiAyNDYuNTU2IDUwMi4zMzYgMjM4LjgxOSA0OTMuMjM0IDIzOC44MTlaIiBmaWxsPSIjZjBmNmZjIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiIG9wYWNpdHk9IjEiIHN0cm9rZT0ibm9uZSIvPgo8L2c+Cjwvc3ZnPgo=';
 
     add_menu_page(
@@ -137,7 +137,7 @@ class Admin {
 	);
   }
 
-  public static function glasses_home_page() {
+  public static function glasses_home_page(): void {
 	echo '<div class="home_layout">';
     echo '<h1>Glasses for WooCommerce</h1>';
 	echo '<p>Let AI set up the store for you.</p>';
@@ -178,7 +178,7 @@ class Admin {
 	echo '</div>';
   }
 
-  public static function glasses_new_store_page() {
+  public static function glasses_new_store_page(): void {
 	  $categories = $_POST['categories'];
 	  echo '<div class="new_store_layout">';
 	  echo '<div class="new_store_prompt_box">';
@@ -204,7 +204,7 @@ class Admin {
 	  echo '</div>';
   }
 
-  public static function glasses_new_product_page() {
+  public static function glasses_new_product_page(): void {
 	  echo '<div class="new_products_layout">';
 	  echo '<div class="new_products_prompt_box">';
 	  echo '<div class="back_title_layout">';
@@ -237,7 +237,7 @@ class Admin {
 	  echo '</div>';
   }
 
-  public static function glasses_settings_page() {
+  public static function glasses_settings_page(): void {
 	  echo '<h1>Glasses for WooCommerce - Settings</h1>';
 	  echo '<form method="POST" action="options.php">';
 	  add_settings_section(
@@ -311,13 +311,13 @@ class Admin {
 	  echo '</form>';
   }
 
-  public static function register_settings() {
+  public static function register_settings(): void {
 	  register_setting('glasses-settings', 'open-ai-api-key');
 	  register_setting('glasses-settings', 'glasses-product-view-option');
 	  register_setting('glasses-settings', 'glasses-how-many');
   }
 
-  public static function glasses_loading_page() {
+  public static function glasses_loading_page(): void {
 	  echo '<div class="loading_layout">';
 	  echo '<div class="loading-icon">
 				<svg class="loading-svg" width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -342,7 +342,7 @@ class Admin {
 	  echo '</div>';
   }
 
-  public static function glasses_categories_page() {
+  public static function glasses_categories_page(): void {
 	  $categories = [
 		  'Clothing' => '<svg width="66" height="66" viewBox="0 0 66 66" fill="none" xmlns="http://www.w3.org/2000/svg">
 							<circle cx="33" cy="33" r="32.5" fill="#F8F7FC" stroke="#EDEDED"/>
@@ -454,7 +454,7 @@ class Admin {
 	 *
 	 * @return mixed
 	 */
-  public static function wc_product_table_columns($columns) {
+  public static function wc_product_table_columns($columns): mixed {
 	  if (get_option('glasses-product-view-option')) {
 		  return $columns;
 	  }
@@ -475,11 +475,12 @@ class Admin {
 	  return $columns;
   }
 
-  public static function wc_product_table_columns_content($column, $postid) {
-	  $product = wc_get_product($postid);
+  public static function wc_product_table_columns_content($column, $postId): void {
+	  $product = wc_get_product($postId);
 
-	  $product_variations = new WC_Product_Variable($postid);
-	  $product_variations = $product_variations->get_available_variations();
+	  // Variation support coming soon.
+	  //$product_variations = new WC_Product_Variable($postId);
+	  //$product_variations = $product_variations->get_available_variations();
 
 	  $pa_glasses_colors = $product->get_attribute('pa_glasses_color');
 	  $pa_glasses_colors = preg_split ("/\,/", $pa_glasses_colors);
@@ -508,6 +509,7 @@ class Admin {
 		  echo '</div>';
 	  }
 
+	  // Images for variations coming soon.
 	  //if ($column === 'images') {
 	//	  foreach ($product_variations as $product_variation) {
 	//		  echo '<img style="height: 30px; width: 30px; border-radius: 4px; margin: 5px;" src="';
@@ -526,27 +528,27 @@ class Admin {
 		  </svg>';
 		  echo '<div class="glasses_edit_links">';
 		  echo '<a href="admin.php?page=glasses-loading';
-		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'color']);
+		  echo '&' . http_build_query(['ids' => [$postId], 'count' => count([$postId]), 'type' => 'color']);
 		  echo '">';
 		  echo 'Add colors';
 		  echo '</a>';
 		  echo '<a href="admin.php?page=glasses-loading';
-		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'description']);
+		  echo '&' . http_build_query(['ids' => [$postId], 'count' => count([$postId]), 'type' => 'description']);
 		  echo '">';
 		  echo 'Add description';
 		  echo '</a>';
 		  echo '<a href="admin.php?page=glasses-loading';
-		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'short description']);
+		  echo '&' . http_build_query(['ids' => [$postId], 'count' => count([$postId]), 'type' => 'short description']);
 		  echo '">';
 		  echo 'Add short description';
 		  echo '</a>';
 		  echo '<a href="admin.php?page=glasses-loading';
-		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'image']);
+		  echo '&' . http_build_query(['ids' => [$postId], 'count' => count([$postId]), 'type' => 'image']);
 		  echo '">';
 		  echo 'Add image';
 		  echo '</a>';
 		  echo '<a href="admin.php?page=glasses-loading';
-		  echo '&' . http_build_query(['ids' => [$postid], 'count' => count([$postid]), 'type' => 'price']);
+		  echo '&' . http_build_query(['ids' => [$postId], 'count' => count([$postId]), 'type' => 'price']);
 		  echo '">';
 		  echo 'Add price';
 		  echo '</a>';
